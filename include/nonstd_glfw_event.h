@@ -1,9 +1,10 @@
-#ifndef GLFW_EVENT_CALLBACK_H
-#define GLFW_EVENT_CALLBACK_H
+#ifndef NONSTD_GLFW_EVENT_H
+#define NONSTD_GLFW_EVENT_H
 
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <GLFW/glfw3.h>
+#include "nonstd_glfw.h"
 
 void errorcallback(int error_code, const char *description);
 
@@ -26,27 +27,6 @@ void charmodscallback(GLFWwindow *window, unsigned int codepoint, int mods);
 void dropcallback(GLFWwindow *window, int path_count, const char **paths);
 void monitorcallback(GLFWmonitor *monitor, int event);
 void joystickcallback(int jid, int event);
-
-GLFWerrorfun old_errorcallback = NULL;
-GLFWwindowposfun old_windowposcallback = NULL;
-GLFWwindowsizefun old_windowsizecallback = NULL;
-GLFWwindowclosefun old_windowclosecallback = NULL;
-GLFWwindowrefreshfun old_windowrefreshcallback = NULL;
-GLFWwindowfocusfun old_windowfocuscallback = NULL;
-GLFWwindowiconifyfun old_windowiconifycallback = NULL;
-GLFWwindowmaximizefun old_windowmaximizecallback = NULL;
-GLFWframebuffersizefun old_framebuffersizecallback = NULL;
-GLFWwindowcontentscalefun old_windowcontentscalecallback = NULL;
-GLFWmousebuttonfun old_mousebuttoncallback = NULL;
-GLFWcursorposfun old_cursorposcallback = NULL;
-GLFWcursorenterfun old_cursorentercallback = NULL;
-GLFWscrollfun old_scrollcallback = NULL;
-GLFWkeyfun old_keycallback = NULL;
-GLFWcharfun old_charcallback = NULL;
-GLFWcharmodsfun old_charmodscallback = NULL;
-GLFWdropfun old_dropcallback = NULL;
-GLFWmonitorfun old_monitorcallback = NULL;
-GLFWjoystickfun old_joystickcallback = NULL;
 
 typedef enum callbackType_e
 {
@@ -206,7 +186,6 @@ typedef struct event_s
     };
 } event_t;
 
-typedef void (*EventHandler)(event_t event);
-
+void install_callbacks(GLFWwindow *window, nonstd_glfw_t *node);
 
 #endif
