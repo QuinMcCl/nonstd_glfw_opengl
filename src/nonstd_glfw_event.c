@@ -1,11 +1,10 @@
 
+#define PRINT_DEBUG
 #ifdef PRINT_DEBUG
 #include <stdio.h>
 #endif
 #include "nonstd_glfw.h"
 #include "nonstd_glfw_event.h"
-
-nonstd_glfw_t *nonstd_glfw_root = NULL;
 
 GLFWerrorfun old_errorcallback = NULL;
 GLFWwindowposfun old_windowposcallback = NULL;
@@ -40,11 +39,13 @@ void errorcallback(int error_code, const char *description)
 
 void windowposcallback(GLFWwindow *window, int xpos, int ypos)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowposcallback:%d:%d\n", xpos, ypos);
 #endif
     if (old_windowposcallback != NULL)
         old_windowposcallback(window, xpos, ypos);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWPOS, .windowposdata = (windowposdata_t){.window = window, .xpos = xpos, .ypos = ypos}});
@@ -54,11 +55,13 @@ void windowposcallback(GLFWwindow *window, int xpos, int ypos)
 
 void windowsizecallback(GLFWwindow *window, int width, int height)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowsizecallback:%d:%d\n", width, height);
 #endif
     if (old_windowsizecallback != NULL)
         old_windowsizecallback(window, width, height);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWSIZE, .windowsizedata = (windowsizedata_t){.window = window, .width = width, .height = height}});
@@ -68,11 +71,13 @@ void windowsizecallback(GLFWwindow *window, int width, int height)
 
 void windowclosecallback(GLFWwindow *window)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowclosecallback\n");
 #endif
     if (old_windowclosecallback != NULL)
         old_windowclosecallback(window);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWCLOSE, .windowclosedata = (windowclosedata_t){.window = window}});
@@ -82,11 +87,13 @@ void windowclosecallback(GLFWwindow *window)
 
 void windowrefreshcallback(GLFWwindow *window)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowrefreshcallback\n");
 #endif
     if (old_windowrefreshcallback != NULL)
         old_windowrefreshcallback(window);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWREFRESH, .windowrefreshdata = (windowrefreshdata_t){.window = window}});
@@ -96,11 +103,13 @@ void windowrefreshcallback(GLFWwindow *window)
 
 void windowfocuscallback(GLFWwindow *window, int focused)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowfocuscallback:%d\n", focused);
 #endif
     if (old_windowfocuscallback != NULL)
         old_windowfocuscallback(window, focused);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWFOCUS, .windowfocusdata = (windowfocusdata_t){.window = window, .focused = focused}});
@@ -110,11 +119,13 @@ void windowfocuscallback(GLFWwindow *window, int focused)
 
 void windowiconifycallback(GLFWwindow *window, int iconified)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowiconifycallback:%d\n", iconified);
 #endif
     if (old_windowiconifycallback != NULL)
         old_windowiconifycallback(window, iconified);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWICONIFY, .windowiconifydata = (windowiconifydata_t){.window = window, .iconified = iconified}});
@@ -124,11 +135,13 @@ void windowiconifycallback(GLFWwindow *window, int iconified)
 
 void windowmaximizecallback(GLFWwindow *window, int maximized)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowmaximizecallback:%d\n", maximized);
 #endif
     if (old_windowmaximizecallback != NULL)
         old_windowmaximizecallback(window, maximized);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWMAXIMIZE, .windowmaximizedata = (windowmaximizedata_t){.window = window, .maximized = maximized}});
@@ -138,6 +151,7 @@ void windowmaximizecallback(GLFWwindow *window, int maximized)
 
 void framebuffersizecallback(GLFWwindow *window, int width, int height)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "framebuffersizecallback:%d:%d\n", width, height);
 #endif
@@ -146,6 +160,7 @@ void framebuffersizecallback(GLFWwindow *window, int width, int height)
     glViewport(0, 0, width, height);
     if (old_framebuffersizecallback != NULL)
         old_framebuffersizecallback(window, width, height);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = FRAMEBUFFERSIZE, .framebuffersizedata = (framebuffersizedata_t){.window = window, .width = width, .height = height}});
@@ -157,11 +172,13 @@ void framebuffersizecallback(GLFWwindow *window, int width, int height)
 
 void windowcontentscalecallback(GLFWwindow *window, float xscale, float yscale)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "windowcontentscalecallback:%f:%f\n", xscale, yscale);
 #endif
     if (old_windowcontentscalecallback != NULL)
         old_windowcontentscalecallback(window, xscale, yscale);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = WINDOWCONTENTSCALE, .windowcontentscaledata = (windowcontentscaledata_t){.window = window, .xscale = xscale, .yscale = yscale}});
@@ -171,11 +188,13 @@ void windowcontentscalecallback(GLFWwindow *window, float xscale, float yscale)
 
 void mousebuttoncallback(GLFWwindow *window, int button, int action, int mods)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "mousebuttoncallback:%d:%d:%d\n", button, action, mods);
 #endif
     if (old_mousebuttoncallback != NULL)
         old_mousebuttoncallback(window, button, action, mods);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = MOUSEBUTTON, .mousebuttondata = (mousebuttondata_t){.window = window, .button = button, .action = action, .mods = mods}});
@@ -185,11 +204,13 @@ void mousebuttoncallback(GLFWwindow *window, int button, int action, int mods)
 
 void cursorposcallback(GLFWwindow *window, double xpos, double ypos)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "cursorposcallback:%f:%f\n", xpos, ypos);
 #endif
     if (old_cursorposcallback != NULL)
         old_cursorposcallback(window, xpos, ypos);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = CURSORPOS, .cursorposdata = (cursorposdata_t){.window = window, .xpos = xpos, .ypos = ypos}});
@@ -199,11 +220,13 @@ void cursorposcallback(GLFWwindow *window, double xpos, double ypos)
 
 void cursorentercallback(GLFWwindow *window, int entered)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "cursorentercallback:%d\n", entered);
 #endif
     if (old_cursorentercallback != NULL)
         old_cursorentercallback(window, entered);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = CURSORENTER, .cursorenterdata = (cursorenterdata_t){.window = window, .entered = entered}});
@@ -213,11 +236,13 @@ void cursorentercallback(GLFWwindow *window, int entered)
 
 void scrollcallback(GLFWwindow *window, double xoffset, double yoffset)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "scrollcallback:%f:%f\n", xoffset, yoffset);
 #endif
     if (old_scrollcallback != NULL)
         old_scrollcallback(window, xoffset, yoffset);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = SCROLL, .scrolldata = (scrolldata_t){.window = window, xoffset = xoffset, .yoffset = yoffset}});
@@ -227,11 +252,13 @@ void scrollcallback(GLFWwindow *window, double xoffset, double yoffset)
 
 void keycallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "keycallback:%d:%d:%d:%d\n", key, scancode, action, mods);
 #endif
     if (old_keycallback != NULL)
         old_keycallback(window, key, scancode, action, mods);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = KEY, .keydata = (keydata_t){.window = window, .key = key, .scancode = scancode, .action = action, .mods = mods}});
@@ -241,11 +268,13 @@ void keycallback(GLFWwindow *window, int key, int scancode, int action, int mods
 
 void charcallback(GLFWwindow *window, unsigned int codepoint)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "charcallback:%d\n", codepoint);
 #endif
     if (old_charcallback != NULL)
         old_charcallback(window, codepoint);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = CHARPRESS, .charpressdata = (charpressdata_t){.window = window, .codepoint = codepoint}});
@@ -255,11 +284,13 @@ void charcallback(GLFWwindow *window, unsigned int codepoint)
 
 void charmodscallback(GLFWwindow *window, unsigned int codepoint, int mods)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "charmodscallback:%d:%d\n", codepoint, mods);
 #endif
     if (old_charmodscallback != NULL)
         old_charmodscallback(window, codepoint, mods);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = CHARMODS, .charmodsdata = (charmodsdata_t){.window = window, .codepoint = codepoint, .mods = mods}});
@@ -269,6 +300,7 @@ void charmodscallback(GLFWwindow *window, unsigned int codepoint, int mods)
 
 void dropcallback(GLFWwindow *window, int path_count, const char **paths)
 {
+    glfwMakeContextCurrent(window);
 #ifdef PRINT_DEBUG
     fprintf(stderr, "dropcallback:%d\n", path_count);
     for (int i = 0; i < path_count; i++)
@@ -276,6 +308,7 @@ void dropcallback(GLFWwindow *window, int path_count, const char **paths)
 #endif
     if (old_dropcallback != NULL)
         old_dropcallback(window, path_count, paths);
+    nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
     if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
     {
         event_t new_event = ((event_t){.type = DROP, .dropdata = (dropdata_t){.window = window, .path_count = path_count, .paths = paths}});
@@ -290,11 +323,12 @@ void monitorcallback(GLFWmonitor *monitor, int event)
 #endif
     if (old_monitorcallback != NULL)
         old_monitorcallback(monitor, event);
-    if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
-    {
-        event_t new_event = ((event_t){.type = MONITOR, .monitordata = (monitordata_t){.monitor = monitor, .event = event}});
-        nonstd_glfw_root->event_handler(nonstd_glfw_root, &new_event);
-    }
+    // nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
+    // if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
+    // {
+    //     event_t new_event = ((event_t){.type = MONITOR, .monitordata = (monitordata_t){.monitor = monitor, .event = event}});
+    //     nonstd_glfw_root->event_handler(nonstd_glfw_root, &new_event);
+    // }
 };
 
 void joystickcallback(int jid, int event)
@@ -304,11 +338,12 @@ void joystickcallback(int jid, int event)
 #endif
     if (old_charcallback != NULL)
         old_joystickcallback(jid, event);
-    if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
-    {
-        event_t new_event = ((event_t){.type = JOYSTICK, .joystickdata = (joystickdata_t){.jid = jid, .event = event}});
-        nonstd_glfw_root->event_handler(nonstd_glfw_root, &new_event);
-    }
+    // nonstd_glfw_t *nonstd_glfw_root = (nonstd_glfw_t *)glfwGetWindowUserPointer(window);
+    // if (nonstd_glfw_root != NULL && nonstd_glfw_root->event_handler != NULL)
+    // {
+    //     event_t new_event = ((event_t){.type = JOYSTICK, .joystickdata = (joystickdata_t){.jid = jid, .event = event}});
+    //     nonstd_glfw_root->event_handler(nonstd_glfw_root, &new_event);
+    // }
 };
 
 void install_error_callback()
@@ -316,9 +351,8 @@ void install_error_callback()
     old_errorcallback = glfwSetErrorCallback(errorcallback);
 }
 
-void install_callbacks(GLFWwindow *window, nonstd_glfw_t *node)
+void install_callbacks(GLFWwindow *window)
 {
-    nonstd_glfw_root = node;
     old_windowposcallback = glfwSetWindowPosCallback(window, windowposcallback);
     old_windowsizecallback = glfwSetWindowSizeCallback(window, windowsizecallback);
     old_windowclosecallback = glfwSetWindowCloseCallback(window, windowclosecallback);

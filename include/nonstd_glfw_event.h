@@ -186,6 +186,6 @@ typedef struct event_s
     };
 } event_t;
 
-void install_callbacks(GLFWwindow *window, nonstd_glfw_t *node);
+void install_callbacks(GLFWwindow *window);
 
 #endif
