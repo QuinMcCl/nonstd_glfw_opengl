@@ -5,6 +5,7 @@ LIB_INCLUDES = $(foreach d, $(DEPS), $(LIB_DIR)/$d/include)
 LIB_LINKS =    $(foreach d, $(DEPS), $(LIB_DIR)/$d/bin/$d) 
 
 LIBSSCLEAN=$(addsuffix clean,$(LIB_DIRS))
+LIBSfCLEAN=$(addsuffix fclean,$(LIB_DIRS))
 LIBSALL=$(addsuffix all,$(LIB_DIRS))
 
 LIB_NAME = libnonstd_glfw_opengl
@@ -47,6 +48,9 @@ re: fclean | $(EXE)
 
 %clean: %
 	$(MAKE) -C $< clean
+
+%fclean: %
+	$(MAKE) -C $< fclean
 
 %all: %
 	$(MAKE) -C $< all
