@@ -56,7 +56,7 @@ int nonstd_glfw_window_init(nonstd_glfw_window_t *window, unsigned int width, un
     glfwMakeContextCurrent(window->window);
     glfwSetWindowUserPointer(window->window, window);
     install_callbacks(window->window);
-    
+
     if (has_glew_initialized != GL_TRUE)
     {
 
@@ -109,8 +109,6 @@ int nonstd_glfw_window_cleanup(void *ptr)
     glfwSetWindowShouldClose(window->window, GL_TRUE);
     glfwDestroyWindow(window->window);
     nonstd_glfw_cleanup(window);
-
-    glfwMakeContextCurrent(NULL);
     return 0;
 }
 
@@ -128,7 +126,7 @@ int nonstd_glfw_window_keyfun(nonstd_glfw_window_t *window, keydata_t *event)
     checkContext(window);
     if (event->key == GLFW_KEY_ESCAPE && event->action == GLFW_PRESS)
     {
-        nonstd_glfw_window_cleanup((void*)window);
+        glfwSetWindowShouldClose(window->window, GL_TRUE);
     }
     return 0;
 }
