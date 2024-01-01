@@ -2,9 +2,8 @@ LIB_DIR = $(PWD)/external
 DEPS = 
 LIB_DIRS =     $(foreach d, $(DEPS), $(LIB_DIR)/$d) 
 LIB_INCLUDES = $(foreach d, $(DEPS), $(LIB_DIR)/$d/include) 
-LIB_LINKS =    $(foreach d, $(DEPS), $(LIB_DIR)/$d/bin/$d) 
 
-LIBSSCLEAN=$(addsuffix clean,$(LIB_DIRS))
+LIBSCLEAN=$(addsuffix clean,$(LIB_DIRS))
 LIBSfCLEAN=$(addsuffix fclean,$(LIB_DIRS))
 LIBSALL=$(addsuffix all,$(LIB_DIRS))
 
@@ -38,10 +37,10 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
-clean: $(LIBSSCLEAN)
+clean: $(LIBSCLEAN)
 	@$(RM) -rv $(BIN_DIR) $(OBJ_DIR)
 
-fclean: clean
+fclean: $(LIBSfCLEAN) clean
 	rm -f $(EXE)
 
 re: fclean | $(EXE)
