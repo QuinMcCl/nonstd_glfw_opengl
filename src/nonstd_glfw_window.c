@@ -13,7 +13,7 @@ int checkContext(nonstd_glfw_window_t *window)
     return 0;
 }
 
-int nonstd_glfw_window_init(nonstd_glfw_window_t *window, unsigned int width, unsigned int height, const char *title)
+int nonstd_glfw_window_init(nonstd_glfw_window_t *window, unsigned int width, unsigned int height, const char *title, float clear_red, float clear_green, float clear_blue, float clear_alpha)
 {
     window->base.update = nonstd_glfw_update;
     window->base.draw = nonstd_glfw_window_draw;
@@ -24,6 +24,11 @@ int nonstd_glfw_window_init(nonstd_glfw_window_t *window, unsigned int width, un
 
     window->width = width;
     window->height = height;
+
+    window->clear_color[0] = clear_red;
+    window->clear_color[1] = clear_green;
+    window->clear_color[2] = clear_blue;
+    window->clear_color[3] = clear_alpha;
 
     if (has_glfw_initialized != GLFW_TRUE)
     {
@@ -77,6 +82,15 @@ int nonstd_glfw_window_init(nonstd_glfw_window_t *window, unsigned int width, un
     return 0;
 }
 
+int nonstd_glfw_window_set_clear_color(nonstd_glfw_window_t *window, float red, float green, float blue, float alpha)
+{
+    window->clear_color[0] = red;
+    window->clear_color[1] = green;
+    window->clear_color[2] = blue;
+    window->clear_color[3] = alpha;
+    return 0;
+}
+
 int nonstd_glfw_window_swap(nonstd_glfw_window_t *window)
 {
     checkContext(window);
@@ -96,7 +110,11 @@ int nonstd_glfw_window_draw(void *ptr)
 {
     nonstd_glfw_window_t *window = (nonstd_glfw_window_t *)ptr;
     checkContext(window);
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(
+        window->clear_color[0],
+        window->clear_color[1],
+        window->clear_color[2],
+        window->clear_color[3]);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     nonstd_glfw_draw(window);
     return 0;
@@ -106,7 +124,6 @@ int nonstd_glfw_window_cleanup(void *ptr)
 {
     nonstd_glfw_window_t *window = (nonstd_glfw_window_t *)ptr;
     checkContext(window);
-    glfwSetWindowShouldClose(window->window, GL_TRUE);
     glfwDestroyWindow(window->window);
     nonstd_glfw_cleanup(window);
     return 0;
