@@ -1,3 +1,4 @@
+#include <time.h>
 #include "nonstd_glfw_event.h"
 #include "nonstd_glfw_window.h"
 
@@ -59,8 +60,6 @@ int nonstd_glfw_window_init(nonstd_glfw_window_t *window, unsigned int width, un
         return -1;
     }
     glfwMakeContextCurrent(window->window);
-    glfwSetWindowUserPointer(window->window, window);
-    install_callbacks(window->window);
 
     if (has_glew_initialized != GL_TRUE)
     {
@@ -99,10 +98,17 @@ int nonstd_glfw_window_swap(nonstd_glfw_window_t *window)
     return 0;
 }
 
-int nonstd_glfw_window_should_close(nonstd_glfw_window_t *window, int *should_close)
+int nonstd_glfw_window_get_should_close(nonstd_glfw_window_t *window, int *should_close)
 {
     checkContext(window);
     *should_close = glfwWindowShouldClose(window->window);
+    return 0;
+}
+
+int nonstd_glfw_window_set_should_close(nonstd_glfw_window_t *window, int *should_close)
+{
+    checkContext(window);
+    glfwSetWindowShouldClose(window->window, *should_close);
     return 0;
 }
 
@@ -144,6 +150,14 @@ int nonstd_glfw_window_keyfun(nonstd_glfw_window_t *window, keydata_t *event)
     if (event->key == GLFW_KEY_ESCAPE && event->action == GLFW_PRESS)
     {
         glfwSetWindowShouldClose(window->window, GL_TRUE);
+    }
+    if (event->key == GLFW_KEY_F && event->action == GLFW_PRESS)
+    {
+        struct timespec ts;
+        ts.tv_sec = 2l;
+        ts.tv_nsec = 0l;
+        while (nanosleep(&ts, &ts))
+            ;
     }
     return 0;
 }
