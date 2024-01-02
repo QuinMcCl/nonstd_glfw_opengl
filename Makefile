@@ -1,5 +1,5 @@
 LIB_DIR = $(PWD)/external
-DEPS = 
+DEPS = nonstd
 LIB_DIRS =     $(foreach d, $(DEPS), $(LIB_DIR)/$d) 
 LIB_INCLUDES = $(foreach d, $(DEPS), $(LIB_DIR)/$d/include) 
 

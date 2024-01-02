@@ -13,6 +13,9 @@ extern "C"
 #include "nonstd_glfw.h"
 #include "nonstd_glfw_window.h"
 
+#include "nonstd_opengl_shader.h"
+#include "nonstd_opengl_ubo.h"
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
