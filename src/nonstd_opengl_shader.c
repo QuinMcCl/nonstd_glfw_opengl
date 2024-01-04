@@ -106,7 +106,6 @@ void nonstd_opengl_shader_use(nonstd_opengl_shader_t *shader)
 }
 void nonstd_opengl_shader_bindBuffer(nonstd_opengl_shader_t *shader, char *name, unsigned int index)
 {
-
     glUniformBlockBinding(shader->ID, glGetUniformBlockIndex(shader->ID, name), index);
 }
 
