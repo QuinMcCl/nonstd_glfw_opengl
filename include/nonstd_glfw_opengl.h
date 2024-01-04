@@ -15,6 +15,7 @@ extern "C"
 
 #include "nonstd_opengl_shader.h"
 #include "nonstd_opengl_ubo.h"
+#include "nonstd_opengl_texture.h"
 
 #ifdef __cplusplus
 } /* extern "C" */
