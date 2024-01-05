@@ -1,14 +1,33 @@
-#define AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE 80.0
-
-#include <assimp/cimport.h>     // Plain-C interface
-#include <assimp/scene.h>       // Output data structure
-#include <assimp/postprocess.h> // Post processing flags
-
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <GLFW/glfw3.h>
 
-int process_mesh(const struct aiScene *scene, const struct aiMesh *mesh)
+#define AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE 80.0
+#include <assimp/cimport.h>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+
+#include "nonstd_opengl_model.h"
+
+int process_node(const struct aiNode *node)
+{
+
+    // node->mTransformation;
+    // node->mParent;
+
+    // for (unsigned int i = 0; i < node->mNumMeshes; i++)
+    // {
+    //     node->mMeshes[i];
+    // }
+
+    for (unsigned int i = 0; i < node->mNumChildren; i++)
+    {
+        process_node(node->mChildren[i]);
+    }
+    return 0;
+}
+
+int process_mesh(const struct aiMesh *mesh)
 {
 
     if (!(mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE))
@@ -16,7 +35,7 @@ int process_mesh(const struct aiScene *scene, const struct aiMesh *mesh)
         return 1;
     }
 
-    GLint VAO, VBO, EBO;
+    GLuint VAO, VBO, EBO;
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -38,7 +57,7 @@ int process_mesh(const struct aiScene *scene, const struct aiMesh *mesh)
     if (mesh->mNumVertices > 0)
     {
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        unsigned int offset = 0;
+        unsigned long int offset = 0;
 
         glBufferSubData(GL_ARRAY_BUFFER, offset, mesh->mNumVertices * sizeof(struct aiVector3D), mesh->mVertices);
         glVertexAttribPointer(
@@ -47,7 +66,7 @@ int process_mesh(const struct aiScene *scene, const struct aiMesh *mesh)
             GL_FLOAT,                  // Atrib Type
             GL_FALSE,                  // Should be Normalized
             sizeof(struct aiVector3D), // Attrib Stride
-            offset                     // Attrib offset
+            (void *)offset             // Attrib offset
         );
         offset += mesh->mNumVertices * sizeof(struct aiVector3D);
 
@@ -60,7 +79,7 @@ int process_mesh(const struct aiScene *scene, const struct aiMesh *mesh)
                 GL_FLOAT,                  // Atrib Type
                 GL_FALSE,                  // Should be Normalized
                 sizeof(struct aiVector3D), // Attrib Stride
-                offset                     // Attrib offset
+                (void *)offset             // Attrib offset
             );
             offset += mesh->mNumVertices * sizeof(struct aiVector3D);
         }
@@ -74,7 +93,7 @@ int process_mesh(const struct aiScene *scene, const struct aiMesh *mesh)
                 GL_FLOAT,                  // Atrib Type
                 GL_FALSE,                  // Should be Normalized
                 sizeof(struct aiVector3D), // Attrib Stride
-                offset                     // Attrib offset
+                (void *)offset             // Attrib offset
             );
             offset += mesh->mNumVertices * sizeof(struct aiVector3D);
         }
@@ -88,78 +107,72 @@ int process_mesh(const struct aiScene *scene, const struct aiMesh *mesh)
                 GL_FLOAT,                  // Atrib Type
                 GL_FALSE,                  // Should be Normalized
                 sizeof(struct aiVector3D), // Attrib Stride
-                offset                     // Attrib offset
+                (void *)offset             // Attrib offset
             );
             offset += mesh->mNumVertices * sizeof(struct aiVector3D);
         }
 
-        if (mesh->mColors)
-        {
-            // AI_MAX_NUMBER_OF_COLOR_SETS
-            glBufferSubData(GL_ARRAY_BUFFER, offset, mesh->mNumVertices * AI_MAX_NUMBER_OF_COLOR_SETS * sizeof(struct aiColor4D), mesh->mColors);
-            glVertexAttribPointer(
-                4,                                                      // Attrib Index
-                4,                                                      // Attrib Size
-                GL_FLOAT,                                               // Atrib Type
-                GL_FALSE,                                               // Should be Normalized
-                AI_MAX_NUMBER_OF_COLOR_SETS * sizeof(struct aiColor4D), // Attrib Stride
-                offset                                                  // Attrib offset
-            );
-            offset += mesh->mNumVertices * AI_MAX_NUMBER_OF_COLOR_SETS * sizeof(struct aiColor4D);
-        }
+        // if (mesh->mColors != NULL)
+        // {
+        //     // AI_MAX_NUMBER_OF_COLOR_SETS
+        //     glBufferSubData(GL_ARRAY_BUFFER, offset, mesh->mNumVertices * AI_MAX_NUMBER_OF_COLOR_SETS * sizeof(struct aiColor4D), mesh->mColors);
+        //     glVertexAttribPointer(
+        //         4,                                                      // Attrib Index
+        //         4,                                                      // Attrib Size
+        //         GL_FLOAT,                                               // Atrib Type
+        //         GL_FALSE,                                               // Should be Normalized
+        //         AI_MAX_NUMBER_OF_COLOR_SETS * sizeof(struct aiColor4D), // Attrib Stride
+        //         (void *)offset                                          // Attrib offset
+        //     );
+        //     offset += mesh->mNumVertices * AI_MAX_NUMBER_OF_COLOR_SETS * sizeof(struct aiColor4D);
+        // }
 
-        if (mesh->mTextureCoords)
-        {
-            // AI_MAX_NUMBER_OF_TEXTURECOORDS
-            glBufferSubData(GL_ARRAY_BUFFER, offset, mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), mesh->mTextureCoords);
-            glVertexAttribPointer(
-                5,                                                         // Attrib Index
-                4,                                                         // Attrib Size
-                GL_FLOAT,                                                  // Atrib Type
-                GL_FALSE,                                                  // Should be Normalized
-                AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), // Attrib Stride
-                offset                                                     // Attrib offset
-            );
-            offset += mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D);
-        }
+        // if (mesh->mTextureCoords)
+        // {
+        //     // AI_MAX_NUMBER_OF_TEXTURECOORDS
+        //     glBufferSubData(GL_ARRAY_BUFFER, offset, mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), mesh->mTextureCoords);
+        //     glVertexAttribPointer(
+        //         5,                                                         // Attrib Index
+        //         4,                                                         // Attrib Size
+        //         GL_FLOAT,                                                  // Atrib Type
+        //         GL_FALSE,                                                  // Should be Normalized
+        //         AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), // Attrib Stride
+        //         (void *)offset                                             // Attrib offset
+        //     );
+        //     offset += mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D);
+        // }
 
-        if (mesh->mTextureCoords)
-        {
-            // AI_MAX_NUMBER_OF_TEXTURECOORDS
-            glBufferSubData(GL_ARRAY_BUFFER, offset, mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), mesh->mTextureCoords);
-            glVertexAttribPointer(
-                6,                                                         // Attrib Index
-                4,                                                         // Attrib Size
-                GL_FLOAT,                                                  // Atrib Type
-                GL_FALSE,                                                  // Should be Normalized
-                AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), // Attrib Stride
-                offset                                                     // Attrib offset
-            );
-            offset += mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D);
-        }
+        // if (mesh->mTextureCoords)
+        // {
+        //     // AI_MAX_NUMBER_OF_TEXTURECOORDS
+        //     glBufferSubData(GL_ARRAY_BUFFER, offset, mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), mesh->mTextureCoords);
+        //     glVertexAttribPointer(
+        //         6,                                                         // Attrib Index
+        //         4,                                                         // Attrib Size
+        //         GL_FLOAT,                                                  // Atrib Type
+        //         GL_FALSE,                                                  // Should be Normalized
+        //         AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D), // Attrib Stride
+        //         (void *)offset                                             // Attrib offset
+        //     );
+        //     offset += mesh->mNumVertices * AI_MAX_NUMBER_OF_TEXTURECOORDS * sizeof(struct aiColor4D);
+        // }
     }
 
     // mesh->mNumBones;
     // mesh->mBones;
 
-    // scene->mMaterials[mesh->mMaterialIndex];
+    // mesh->mMaterialIndex;
+    return 0;
 }
 
-int process_node(const struct aiScene *scene, struct aiNode *node)
+int process_material(const struct aiMaterial *material)
 {
-
-    node->mTransformation;
-    node->mParent;
-
-    for (int i = 0; i < node->mNumMeshes; i++)
+    for (unsigned int i = 0; i < material->mNumProperties; i++)
     {
-        node->mMeshes[i];
+        unsigned int index = material->mProperties[i]->mIndex;
+        index = index;
     }
-
-    for (int i = 0; i < node->mNumChildren; i++)
-    {
-        process_node(scene, node->mChildren[i]);
-    }
+    return 0;
 }
 
 int DoTheImportThing(const char *pFile)
@@ -190,14 +203,14 @@ int DoTheImportThing(const char *pFile)
         return 1;
     }
 
-    for (int i = 0; i < scene->mNumMeshes; i++)
+    for (unsigned int i = 0; i < scene->mNumMeshes; i++)
     {
-        process_mesh(scene, scene->mMeshes[i]);
+        process_mesh(scene->mMeshes[i]);
     }
 
-    for (int i = 0; i < scene->mNumMaterials; i++)
+    for (unsigned int i = 0; i < scene->mNumMaterials; i++)
     {
-        process_materials(scene, scene->mMaterials[i]);
+        process_material(scene->mMaterials[i]);
     }
 
     // for(int i = 0; i < scene->mNumAnimations; i++)
@@ -223,7 +236,7 @@ int DoTheImportThing(const char *pFile)
     // Now we can access the file's contents
     // DoTheSceneProcessing(scene);
 
-    process_node(scene, scene->mRootNode);
+    process_node(scene->mRootNode);
 
     // We're done. Release all resources associated with this import
     aiReleaseImport(scene);
