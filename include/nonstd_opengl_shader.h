@@ -23,17 +23,17 @@ typedef enum shader_set_type_e
 typedef struct nonstd_opengl_shader_s
 {
     unsigned int ID;
-} nonstd_opengl_shader_t;
+} shader_t;
 
 // constructor generates the shader on the fly
 // ------------------------------------------------------------------------
-void nonstd_opengl_shader_init(nonstd_opengl_shader_t *shader, const char *vertexPath, const char *fragmentPath);
-void nonstd_opengl_shader_cleanup(nonstd_opengl_shader_t *shader);
+void shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPath);
+void shader_cleanup(shader_t *shader);
 // activate the shader
 // ------------------------------------------------------------------------
-void nonstd_opengl_shader_use(nonstd_opengl_shader_t *shader);
-void nonstd_opengl_shader_bindBuffer(nonstd_opengl_shader_t *shader, char *name, unsigned int index);
+void shader_use(shader_t *shader);
+void shader_bindBuffer(shader_t *shader, char *name, unsigned int index);
 
-void nonstd_opengl_shader_set(nonstd_opengl_shader_t *shader, char *name, shader_set_type_t type, int count, void *value);
+void shader_set(const shader_t *shader, char *name, shader_set_type_t type, int count, void *value);
 
 #endif

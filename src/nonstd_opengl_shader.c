@@ -65,7 +65,7 @@ unsigned int linkShader(unsigned int vertex, unsigned int fragment)
     return id;
 }
 
-void nonstd_opengl_shader_init(nonstd_opengl_shader_t *shader, const char *vertexPath, const char *fragmentPath)
+void shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPath)
 {
     shader->ID = GL_FALSE;
     // 1. retrieve the vertex/fragment source code from filePath
@@ -91,7 +91,7 @@ void nonstd_opengl_shader_init(nonstd_opengl_shader_t *shader, const char *verte
     glDeleteShader(fragment);
 }
 
-void nonstd_opengl_shader_cleanup(nonstd_opengl_shader_t *shader)
+void shader_cleanup(shader_t *shader)
 {
     if (shader->ID != GL_FALSE)
     {
@@ -100,16 +100,16 @@ void nonstd_opengl_shader_cleanup(nonstd_opengl_shader_t *shader)
     }
 }
 
-void nonstd_opengl_shader_use(nonstd_opengl_shader_t *shader)
+void shader_use(shader_t *shader)
 {
     glUseProgram(shader->ID);
 }
-void nonstd_opengl_shader_bindBuffer(nonstd_opengl_shader_t *shader, char *name, unsigned int index)
+void shader_bindBuffer(shader_t *shader, char *name, unsigned int index)
 {
     glUniformBlockBinding(shader->ID, glGetUniformBlockIndex(shader->ID, name), index);
 }
 
-void nonstd_opengl_shader_set(nonstd_opengl_shader_t *shader, char *name, shader_set_type_t type, int count, void *value)
+void shader_set(const shader_t *shader, char *name, shader_set_type_t type, int count, void *value)
 {
     GLint loc = glGetUniformLocation(shader->ID, name);
     switch (type)

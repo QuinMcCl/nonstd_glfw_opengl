@@ -1,7 +1,7 @@
 LIB_DIR = $(PWD)/external
 DEPS = nonstd
 LIB_DIRS =     $(foreach d, $(DEPS), $(LIB_DIR)/$d) 
-LIB_INCLUDES = $(foreach d, $(DEPS), $(LIB_DIR)/$d/include) 
+LIB_INCLUDES = $(foreach d, $(DEPS), $(LIB_DIR)/$d/include)
 
 LIBSCLEAN=$(addsuffix clean,$(LIB_DIRS))
 LIBSfCLEAN=$(addsuffix fclean,$(LIB_DIRS))
