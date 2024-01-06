@@ -5,7 +5,7 @@
 #include <GL/glut.h>
 #include <GLFW/glfw3.h>
 
-typedef int (*nonstd_glfw_update_t)(void *nonstd_glfw, float dt);
+typedef int (*nonstd_glfw_update_t)(void *nonstd_glfw, double dt);
 typedef int (*nonstd_glfw_draw_t)(void *nonstd_glfw);
 typedef int (*nonstd_glfw_cleanup_t)(void *nonstd_glfw);
 typedef int (*nonstd_glfw_event_handler_t)(void *nonstd_glfw, void *event);
@@ -25,7 +25,7 @@ int nonstd_glfw_init(nonstd_glfw_t *nonstd_glfw);
 int nonstd_glfw_adopt(nonstd_glfw_t *parent, nonstd_glfw_t *child);
 int nonstd_glfw_orphan(nonstd_glfw_t *parent, nonstd_glfw_t *child);
 
-int nonstd_glfw_update(void *nonstd_glfw, float dt);
+int nonstd_glfw_update(void *nonstd_glfw, double dt);
 int nonstd_glfw_draw(void *nonstd_glfw);
 int nonstd_glfw_cleanup(void *nonstd_glfw);
 int nonstd_glfw_event_handler(void *nonstd_glfw, void *e);

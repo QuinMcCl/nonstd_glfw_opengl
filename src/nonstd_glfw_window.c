@@ -60,6 +60,7 @@ int nonstd_glfw_window_init(nonstd_glfw_window_t *window, unsigned int width, un
         return -1;
     }
     glfwMakeContextCurrent(window->window);
+    glfwSwapInterval(0);
 
     if (has_glew_initialized != GL_TRUE)
     {

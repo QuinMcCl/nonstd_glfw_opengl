@@ -76,7 +76,7 @@ int nonstd_glfw_orphan(nonstd_glfw_t *parent, nonstd_glfw_t *child)
     return 0;
 }
 
-int nonstd_glfw_update(void *ptr, float dt)
+int nonstd_glfw_update(void *ptr, double dt)
 {
     nonstd_glfw_t *nonstd_glfw = (nonstd_glfw_t *)ptr;
     if (nonstd_glfw->child != NULL && nonstd_glfw->child->update != NULL)

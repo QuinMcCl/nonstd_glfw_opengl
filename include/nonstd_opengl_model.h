@@ -23,6 +23,9 @@ extern "C"
 
     typedef struct model_material_s
     {
+        float specStrength;
+        float specValue;
+
         unsigned int count[AI_TEXTURE_TYPE_MAX];
         unsigned long int *texture_index[AI_TEXTURE_TYPE_MAX];
     } model_material_t;
