@@ -128,10 +128,10 @@ int nonstd_glfw_window_draw(void *ptr)
 
 int nonstd_glfw_window_cleanup(void *ptr)
 {
+    nonstd_glfw_cleanup(ptr);
     nonstd_glfw_window_t *window = (nonstd_glfw_window_t *)ptr;
     checkContext(window);
     glfwDestroyWindow(window->window);
-    nonstd_glfw_cleanup(window);
     return 0;
 }
 
