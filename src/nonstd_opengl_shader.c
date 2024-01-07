@@ -4,7 +4,7 @@
 
 #include <GL/glew.h>
 #include <GL/glut.h>
-#include <GLFW/glfw3.h>
+
 #include "nonstd.h"
 #include "nonstd_opengl_shader.h"
 
@@ -100,16 +100,17 @@ void shader_cleanup(shader_t *shader)
     }
 }
 
-void shader_use(shader_t *shader)
+void shader_use(const shader_t *shader)
 {
     glUseProgram(shader->ID);
 }
-void shader_bindBuffer(shader_t *shader, char *name, unsigned int index)
+
+void shader_bindBuffer(const shader_t *shader, const char *name, const unsigned int index)
 {
     glUniformBlockBinding(shader->ID, glGetUniformBlockIndex(shader->ID, name), index);
 }
 
-void shader_set(const shader_t *shader, char *name, shader_set_type_t type, int count, void *value)
+void shader_set(const shader_t *shader, const char *name, const shader_set_type_t type, const int count, void *value)
 {
     GLint loc = glGetUniformLocation(shader->ID, name);
     switch (type)

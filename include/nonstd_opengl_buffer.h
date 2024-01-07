@@ -1,10 +1,6 @@
 #ifndef OPENGL_UBO_H
 #define OPENGL_UBO_H
 
-#include <GL/glew.h>
-#include <GL/glut.h>
-#include <GLFW/glfw3.h>
-
 typedef struct nonstd_opengl_ubo_s
 {
 

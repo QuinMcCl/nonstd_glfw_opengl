@@ -2,9 +2,6 @@
 #define NONSTD_OPENGL_TEXTURE_H
 
 
-#include <GL/glew.h>
-#include <GL/glut.h>
-#include <GLFW/glfw3.h>
 // #include <string>
 // #include <map>
 
@@ -22,6 +19,10 @@ typedef struct texture_s
 
 int texture_unit_freelist_alloc();
 int texture_unit_freelist_free();
+
+int loaded_textures_alloc(unsigned long num_textures);
+int loaded_textures_free();
+
 
 int texture_alloc(texture_t * texture, const char * filePath);
 int texture_free(texture_t *texture);

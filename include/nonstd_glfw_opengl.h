@@ -9,19 +9,14 @@
 extern "C"
 {
 #endif
-
-#include "nonstd_glfw_event.h"
-#include "nonstd_glfw.h"
 #include "nonstd_glfw_window.h"
 
 #include "nonstd_opengl_shader.h"
-#include "nonstd_opengl_ubo.h"
+#include "nonstd_opengl_buffer.h"
 #include "nonstd_opengl_texture.h"
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-#include "nonstd_opengl_model.h"
 
 #endif

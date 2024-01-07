@@ -31,9 +31,9 @@ void shader_init(shader_t *shader, const char *vertexPath, const char *fragmentP
 void shader_cleanup(shader_t *shader);
 // activate the shader
 // ------------------------------------------------------------------------
-void shader_use(shader_t *shader);
-void shader_bindBuffer(shader_t *shader, char *name, unsigned int index);
+void shader_use(const shader_t *shader);
+void shader_bindBuffer(const shader_t *shader, const char *name, const unsigned int index);
 
-void shader_set(const shader_t *shader, char *name, shader_set_type_t type, int count, void *value);
+void shader_set(const shader_t *shader, const char *name, const shader_set_type_t type, const int count, void *value);
 
 #endif
