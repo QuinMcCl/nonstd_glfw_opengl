@@ -144,7 +144,7 @@ int texture_activate(unsigned long int loaded_texture_index, int *unit)
         return retval;
     });
 #endif
-    texture_t *texture;
+    texture_t *texture = NULL;
 
     CHECK(pool_get_ptr((void **)&texture, &(loaded_texture_list.pool), loaded_texture_index), {
         THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
@@ -234,7 +234,7 @@ int texture_deactivate(unsigned long int loaded_texture_index)
 int get_load_texture(unsigned long int *loaded_texture_index, char *filePath, unsigned long path_length)
 {
 
-    texture_t *texture;
+    texture_t *texture = NULL;
 
     CHECK(hashmap_find((void **)loaded_texture_index, &loaded_textures_map, (unsigned char *)filePath, path_length), return retval);
 
@@ -246,6 +246,7 @@ int get_load_texture(unsigned long int *loaded_texture_index, char *filePath, un
             THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
             return retval;
         });
+
         CHECK(pool_get_ptr((void **)&texture, &(loaded_texture_list.pool), *loaded_texture_index), {
             THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
             return retval;
@@ -256,7 +257,7 @@ int get_load_texture(unsigned long int *loaded_texture_index, char *filePath, un
             return retval;
         });
 
-        CHECK(hashmap_add((void *)loaded_texture_index, &loaded_textures_map, (unsigned char *)filePath, path_length), {
+        CHECK(hashmap_add((void *)*loaded_texture_index, &loaded_textures_map, (unsigned char *)filePath, path_length), {
             THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
             return retval;
         });

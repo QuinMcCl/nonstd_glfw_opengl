@@ -26,7 +26,7 @@ int loaded_textures_free();
 
 int texture_alloc(texture_t * texture, const char * filePath);
 int texture_free(texture_t *texture);
-int texture_activate(unsigned long int loaded_texture_index, GLint * unit);
+int texture_activate(unsigned long int loaded_texture_index, int* unit);
 int texture_deactivate(unsigned long int loaded_texture_index);
 
 

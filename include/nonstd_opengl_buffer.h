@@ -1,5 +1,5 @@
-#ifndef OPENGL_UBO_H
-#define OPENGL_UBO_H
+#ifndef OPENGL_BUFFER_H
+#define OPENGL_BUFFER_H
 
 typedef struct nonstd_opengl_ubo_s
 {

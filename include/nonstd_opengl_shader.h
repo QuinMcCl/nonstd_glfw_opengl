@@ -1,6 +1,8 @@
 #ifndef OPENGL_SHADER_H
 #define OPENGL_SHADER_H
 
+#include "nonstd.h"
+
 typedef enum shader_set_type_e
 {
     F1,
@@ -20,20 +22,31 @@ typedef enum shader_set_type_e
     M4
 } shader_set_type_t;
 
+typedef struct shader_attrubute_s
+{
+    unsigned int mAttributeType;
+    int mAttributeSize;
+
+}shader_attrubute_t;
+
 typedef struct nonstd_opengl_shader_s
 {
     unsigned int ID;
+    unsigned int mNumAttributes;
+    shader_attrubute_t *mAttributeList;
+    hashmap_t mAttributeMap;
+
 } shader_t;
 
 // constructor generates the shader on the fly
 // ------------------------------------------------------------------------
-void shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPath);
-void shader_cleanup(shader_t *shader);
+int shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPath);
+int shader_free(shader_t *shader);
 // activate the shader
 // ------------------------------------------------------------------------
-void shader_use(const shader_t *shader);
-void shader_bindBuffer(const shader_t *shader, const char *name, const unsigned int index);
+int shader_use(const shader_t *shader);
+int shader_bindBuffer(const shader_t *shader, const char *name, const unsigned int index);
 
-void shader_set(const shader_t *shader, const char *name, const shader_set_type_t type, const int count, void *value);
+int shader_set(const shader_t *shader, const char *name, const shader_set_type_t type, const int count, void *value);
 
 #endif
