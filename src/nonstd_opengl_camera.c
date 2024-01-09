@@ -44,32 +44,30 @@ int camera_free(camera_t *camera)
 
 int camera_update_view_projection(camera_t *camera)
 {
-    vec3 front;
-    vec3 up;
-    mat4 dst;
+    camera->front[0] = cos(glm_rad(camera->mYaw)) * cos(glm_rad(camera->mPitch));
+    camera->front[1] = sin(glm_rad(camera->mPitch));
+    camera->front[2] = sin(glm_rad(camera->mYaw)) * cos(glm_rad(camera->mPitch));
 
-    front[0] = cos(glm_rad(camera->mYaw)) * cos(glm_rad(camera->mPitch));
-    front[1] = sin(glm_rad(camera->mPitch));
-    front[2] = sin(glm_rad(camera->mYaw)) * cos(glm_rad(camera->mPitch));
+    glm_vec3_normalize(camera->front);
+    vec3 center;
+    glm_vec3_add(camera->mPosition, camera->front, center);
 
-    glm_vec3_normalize(front);
+    glm_vec3_copy(camera->mWorldUp, camera->up);
+    glm_vec3_rotate(camera->up, glm_rad(camera->mRoll), camera->front);
+    glm_lookat(camera->mPosition, center, camera->up, camera->view);
 
-    glm_vec3_copy(camera->mWorldUp, up);
-    glm_vec3_rotate(up, glm_rad(camera->mRoll), front);
-    glm_lookat(camera->mPosition, front, up, dst);
-
-    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), dst, sizeof(mat4), 0 * sizeof(mat4)), return retval);
+    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->view, sizeof(mat4), 0 * sizeof(mat4)), return retval);
 
     if (camera->projection_type == PERSPECTIVE)
     {
-        glm_perspective(glm_rad(camera->mFOV), camera->mAspect, camera->mNearZ, camera->mFarZ, dst);
+        glm_perspective(glm_rad(camera->mFOV), camera->mAspect, camera->mNearZ, camera->mFarZ, camera->projection);
     }
     else
     {
-        glm_ortho(-camera->mFOV, camera->mFOV, -camera->mFOV / camera->mAspect, camera->mFOV / camera->mAspect, camera->mNearZ, camera->mFarZ, dst);
+        glm_ortho(-camera->mFOV, camera->mFOV, -camera->mFOV / camera->mAspect, camera->mFOV / camera->mAspect, camera->mNearZ, camera->mFarZ, camera->projection);
     }
 
-    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), dst, sizeof(mat4), 1 * sizeof(mat4)), return retval);
+    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->projection, sizeof(mat4), 1 * sizeof(mat4)), return retval);
 
     return 0;
 }

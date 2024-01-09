@@ -74,6 +74,7 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
             int path_length = snprintf(file_path, MAX_PATH_LENGTH - 1, "%s/%s", rootpath, path.data);
             if (path_length > MAX_PATH_LENGTH)
                 path_length = MAX_PATH_LENGTH;
+            material->mTextureIndex[type][index] = (unsigned long)-1l;
             CHECK(get_load_texture(&(material->mTextureIndex[type][index]), file_path, path_length), return retval);
         }
     }
@@ -449,6 +450,8 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
         CHECK(safe_alloc((void **)&(model->mMeshList[i].mTransformation), model->mMeshList[i].mNumInstances * sizeof(mat4)), return retval);
+        memset((void *)model->mMeshList[i].mTransformation, 0, model->mMeshList[i].mNumInstances * sizeof(mat4));
+
     }
 
     // We're done. Release all resources associated with this import

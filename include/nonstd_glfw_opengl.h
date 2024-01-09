@@ -5,10 +5,6 @@
 #include <GL/glut.h>
 #include <GLFW/glfw3.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
 #include "nonstd_glfw_window.h"
 
 #include "nonstd_opengl_buffer.h"
@@ -16,9 +12,5 @@ extern "C"
 #include "nonstd_opengl_texture.h"
 #include "nonstd_opengl_model.h"
 #include "nonstd_opengl_camera.h"
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
 
 #endif
