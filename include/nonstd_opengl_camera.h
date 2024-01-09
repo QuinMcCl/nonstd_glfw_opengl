@@ -19,6 +19,7 @@ extern "C"
     {
         vec3 mPosition;
         vec3 mWorldUp;
+        float mMouseSensitivity;
         float mPitch;
         float mYaw;
         float mRoll;

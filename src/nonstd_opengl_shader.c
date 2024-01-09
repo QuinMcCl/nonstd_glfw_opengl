@@ -113,7 +113,8 @@ int shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPa
     {
         int len = 0;
         glGetActiveAttrib(shader->ID, i, lenAttributeMax, &len, &(shader->mAttributeList[i].mAttributeSize), &(shader->mAttributeList[i].mAttributeType), (GLchar *)attributeNameBuffer);
-        CHECK(hashmap_add((void *)i, &(shader->mAttributeMap), attributeNameBuffer, len), return retval);
+        long int location = glGetAttribLocation(shader->ID, (const char *)attributeNameBuffer);
+        CHECK(hashmap_add((void *)location, &(shader->mAttributeMap), attributeNameBuffer, len), return retval);
     }
 
     CHECK(safe_free((void **)&attributeNameBuffer, lenAttributeMax), return retval);

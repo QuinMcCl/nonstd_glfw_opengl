@@ -121,7 +121,6 @@ void window_swap(window_t *window)
     glfwMakeContextCurrent(window->window);
 #endif
     glfwSwapBuffers(window->window);
-    glfwPollEvents();
 #ifdef CONTEXT_SWITCHING
     glfwMakeContextCurrent(oldContext);
 #endif

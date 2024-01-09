@@ -48,6 +48,7 @@ int loaded_textures_alloc(unsigned long num_textures)
     THROW_ERR((num_textures == 0), "INVALID TEXTURE COUNT", return retval);
 #endif
 
+    stbi_set_flip_vertically_on_load(1);
     if (LoadedTextures_initialized == GL_TRUE)
         return 0;
     CHECK(freelist_alloc(&loaded_texture_list, num_textures, sizeof(texture_t)), return retval);
