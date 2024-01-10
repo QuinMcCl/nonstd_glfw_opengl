@@ -54,20 +54,20 @@ int camera_update_view_projection(camera_t *camera)
 
     glm_vec3_copy(camera->mWorldUp, camera->up);
     glm_vec3_rotate(camera->up, glm_rad(camera->mRoll), camera->front);
-    glm_lookat(camera->mPosition, center, camera->up, camera->view);
+    glm_lookat(camera->mPosition, center, camera->up, camera->mView);
 
-    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->view, sizeof(mat4), 0 * sizeof(mat4)), return retval);
+    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->mView, sizeof(mat4), 0 * sizeof(mat4)), return retval);
 
     if (camera->projection_type == PERSPECTIVE)
     {
-        glm_perspective(glm_rad(camera->mFOV), camera->mAspect, camera->mNearZ, camera->mFarZ, camera->projection);
+        glm_perspective(glm_rad(camera->mFOV), camera->mAspect, camera->mNearZ, camera->mFarZ, camera->mProjection);
     }
     else
     {
-        glm_ortho(-camera->mFOV, camera->mFOV, -camera->mFOV / camera->mAspect, camera->mFOV / camera->mAspect, camera->mNearZ, camera->mFarZ, camera->projection);
+        glm_ortho(-camera->mFOV, camera->mFOV, -camera->mFOV / camera->mAspect, camera->mFOV / camera->mAspect, camera->mNearZ, camera->mFarZ, camera->mProjection);
     }
 
-    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->projection, sizeof(mat4), 1 * sizeof(mat4)), return retval);
+    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->mProjection, sizeof(mat4), 1 * sizeof(mat4)), return retval);
 
     return 0;
 }

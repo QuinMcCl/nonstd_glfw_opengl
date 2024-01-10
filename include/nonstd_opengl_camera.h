@@ -34,8 +34,8 @@ extern "C"
 
         vec3 front;
         vec3 up;
-        mat4 view;
-        mat4 projection;
+        mat4 mView;
+        mat4 mProjection;
 
     } camera_t;
 
