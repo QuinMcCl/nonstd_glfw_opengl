@@ -1,5 +1,4 @@
 #include <GL/glew.h>
-#include <GL/glut.h>
 
 #include <stb/stb_image.h>
 #include <string.h>
@@ -252,6 +251,8 @@ int get_load_texture(unsigned long int *loaded_texture_index, char *filePath, un
             THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
             return retval;
         });
+
+        memset(texture, 0, sizeof(texture_t));
 
         CHECK(texture_alloc(texture, filePath), {
             THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);

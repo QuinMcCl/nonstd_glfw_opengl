@@ -22,7 +22,7 @@ OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 # CPPFLAGS = -Iinclude -MMD -MP -Ofast
 CFLAGS   = -Wall -Wextra -Werror -g -fpic 
 LDFLAGS  = $(foreach d, $(LIB_DIRS), -L $d/lib) -shared 
-LDLIBS   = $(foreach d, $(DEPS), -l$d) -lassimp -lGLEW
+LDLIBS   = $(foreach d, $(DEPS), -l$d) -lassimp -l:libGLEW.a
 INCLUDES = $(foreach d, $(LIB_INCLUDES), -I$d)
 
 .PHONY: all clean  fclean re

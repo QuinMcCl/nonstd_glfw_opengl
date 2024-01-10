@@ -1,5 +1,4 @@
 #include <GL/glew.h>
-#include <GL/glut.h>
 
 #include "nonstd.h"
 #include "nonstd_opengl_buffer.h"

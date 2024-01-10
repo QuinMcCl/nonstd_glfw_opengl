@@ -1,5 +1,4 @@
 #include <GL/glew.h>
-#include <GL/glut.h>
 
 #include <cglm/cglm.h>
 
@@ -27,7 +26,7 @@ int camera_alloc(
     camera->mAspect = aspect;
     camera->mFOV = fov;
     camera->projection_type = PERSPECTIVE;
-    camera->mMouseSensitivity =  0.0001f;
+    camera->mMouseSensitivity =  0.01f;
 
     glm_vec3_copy(position, camera->mPosition);
     glm_vec3_copy(up, camera->mWorldUp);

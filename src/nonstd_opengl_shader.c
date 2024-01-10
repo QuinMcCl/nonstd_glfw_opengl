@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include <GL/glew.h>
-#include <GL/glut.h>
 
 #include "nonstd.h"
 #include "nonstd_opengl_shader.h"
