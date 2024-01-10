@@ -68,7 +68,7 @@ int window_init(window_t *window, unsigned int width, unsigned int height, const
     // glew: load all OpenGL function pointers
     // ---------------------------------------
     // If using GLEW version 1.13 or earlier
-    glewExperimental = GL_TRUE;
+    // glewExperimental = GL_TRUE;
     GLenum glew_err = glewInit();
     if (GLEW_OK != glew_err)
     {
