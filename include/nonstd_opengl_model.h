@@ -8,10 +8,47 @@
 extern "C"
 {
 #endif
+
+    const char *materialNames[] = {
+        "None",
+        "Diffuse",
+        "Specular",
+        "Ambient",
+        "Emissive",
+        "Height",
+        "Normals",
+        "Shininess",
+        "Opacity",
+        "Displacemet",
+        "Lightmap",
+        "Reflection",
+        "BaseColor",
+        "NormalCamera",
+        "EmissiveColor",
+        "Metalness",
+        "DiffuseRoughness",
+        "AmbientOcclusion",
+        "Sheen",
+        "ClearCoat",
+        "Transmission"};
+
+    typedef struct material_texture_s
+    {
+        struct aiString path;
+        enum aiTextureMapping mapping;
+        unsigned int uvindex;
+        ai_real blend;
+        enum aiTextureOp op;
+        enum aiTextureMapMode mapmode;
+        unsigned int flags;
+        unsigned long int mTextureIndex;
+    } material_texture_t;
+
     typedef struct material_s
     {
         unsigned int mTextureCount[AI_TEXTURE_TYPE_MAX + 1];
-        unsigned long int *mTextureIndex[AI_TEXTURE_TYPE_MAX + 1];
+        material_texture_t *mTextures[AI_TEXTURE_TYPE_MAX + 1];
+        // unsigned long int *mTextureIndex[AI_TEXTURE_TYPE_MAX + 1];
         unsigned int mNumMeshes;
         unsigned int *mMeshes;
     } material_t;

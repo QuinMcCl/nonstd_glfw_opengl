@@ -58,24 +58,36 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
 
         if (TextureCount > 0)
         {
-            CHECK(safe_alloc((void **)&(material->mTextureIndex[type]), TextureCount * sizeof(unsigned long int)), return retval);
-            memset((void *)material->mTextureIndex[type], 0, TextureCount * sizeof(unsigned long int));
+            CHECK(safe_alloc((void **)&(material->mTextures[type]), TextureCount * sizeof(material_texture_t)), return retval);
+            memset((void *)material->mTextures[type], 0, TextureCount * sizeof(material_texture_t));
+            // CHECK(safe_alloc((void **)&(material->mTextureIndex[type]), TextureCount * sizeof(unsigned long int)), return retval);
+            // memset((void *)material->mTextureIndex[type], 0, TextureCount * sizeof(unsigned long int));
         }
 
         for (unsigned int index = 0; index < TextureCount; index++)
         {
             char file_path[MAX_PATH_LENGTH];
             memset(file_path, 0, MAX_PATH_LENGTH);
-            struct aiString path;
+            material_texture_t *texture_data = &(material->mTextures[type][index]);
 
-            aiGetMaterialTexture(aiMaterial, type, index, &path, NULL, NULL, NULL, NULL, NULL, NULL);
+            aiGetMaterialTexture(
+                aiMaterial,
+                type,
+                index,
+                &(texture_data->path),
+                &(texture_data->mapping),
+                &(texture_data->uvindex),
+                &(texture_data->blend),
+                &(texture_data->op),
+                &(texture_data->mapmode),
+                &(texture_data->flags));
 
-            int path_length = snprintf(file_path, MAX_PATH_LENGTH - 1, "%s/%s", rootpath, path.data);
+            int path_length = snprintf(file_path, MAX_PATH_LENGTH - 1, "%s/%s", rootpath, texture_data->path.data);
             if (path_length > MAX_PATH_LENGTH)
                 path_length = MAX_PATH_LENGTH;
-            // material->mTextureIndex[type][index] = 0;
-            material->mTextureIndex[type][index] = (unsigned long)-1l;
-            CHECK(get_load_texture(&(material->mTextureIndex[type][index]), file_path, path_length), return retval);
+
+            texture_data->mTextureIndex = (unsigned long)-1l;
+            CHECK(get_load_texture(&(texture_data->mTextureIndex), file_path, path_length), return retval);
         }
     }
     return 0;
@@ -87,7 +99,7 @@ int material_free(material_t *material)
     {
         if (material->mTextureCount[type] > 0)
         {
-            CHECK(safe_free((void **)&(material->mTextureIndex[type]), material->mTextureCount[type] * sizeof(unsigned long int)), return retval);
+            CHECK(safe_free((void **)&(material->mTextures[type]), material->mTextureCount[type] * sizeof(material_texture_t)), return retval);
         }
     }
     return 0;
@@ -524,29 +536,6 @@ int mesh_draw(mesh_t *mesh, const shader_t *shader)
     return 0;
 }
 
-const char *materialNames[] = {
-    "None",
-    "Diffuse",
-    "Specular",
-    "Ambient",
-    "Emissive",
-    "Height",
-    "Normals",
-    "Shininess",
-    "Opacity",
-    "Displacemet",
-    "Lightmap",
-    "Reflection",
-    "BaseColor",
-    "NormalCamera",
-    "EmissiveColor",
-    "Metalness",
-    "DiffuseRoughness",
-    "AmbientOcclusion",
-    "Sheen",
-    "ClearCoat",
-    "Transmission"};
-
 int material_draw(material_t *material, model_t *model)
 {
 
@@ -558,9 +547,8 @@ int material_draw(material_t *material, model_t *model)
             memset(name_buffer, 0, 1024);
 
             int unit = -1;
-            CHECK(texture_activate(material->mTextureIndex[type][index], &unit), return retval);
-            
-            // int unit = 0;
+            CHECK(texture_activate(material->mTextures[type][index].mTextureIndex, &unit), return retval);
+
             snprintf(name_buffer, 1023, "Material.%s[%d]", materialNames[type], index);
             CHECK(shader_set(model->mShader, name_buffer, I1, 1, &unit), return retval);
         }
