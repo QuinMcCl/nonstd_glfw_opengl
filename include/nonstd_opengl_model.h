@@ -9,31 +9,10 @@ extern "C"
 {
 #endif
 
-    const char *materialNames[] = {
-        "None",
-        "Diffuse",
-        "Specular",
-        "Ambient",
-        "Emissive",
-        "Height",
-        "Normals",
-        "Shininess",
-        "Opacity",
-        "Displacemet",
-        "Lightmap",
-        "Reflection",
-        "BaseColor",
-        "NormalCamera",
-        "EmissiveColor",
-        "Metalness",
-        "DiffuseRoughness",
-        "AmbientOcclusion",
-        "Sheen",
-        "ClearCoat",
-        "Transmission"};
 
     typedef struct material_texture_s
     {
+        char name[1024];
         struct aiString path;
         enum aiTextureMapping mapping;
         unsigned int uvindex;
@@ -59,14 +38,13 @@ extern "C"
         unsigned int mNumElements;
 
         unsigned int mVAO;
-
-        unsigned int mElementBuffer;
-        unsigned int mVertexBuffer;
-        unsigned int mNormalBuffer;
-        unsigned int mTangentBuffer;
-        unsigned int mBitTangentBuffer;
-        unsigned int mColorBuffers[AI_MAX_NUMBER_OF_COLOR_SETS];
-        unsigned int mTexCoordBuffers[AI_MAX_NUMBER_OF_TEXTURECOORDS];
+        struct
+        {
+            unsigned int mElementBuffer; // GL_ELEMENT_ARRAY_BUFFER
+#define X(L, I, S, N) unsigned int L;
+            XLAYOUTS
+#undef X
+        } mBuffers;
 
         unsigned int mNumInstances;
         mat4 *mTransformation;
@@ -93,7 +71,7 @@ extern "C"
     typedef struct model_s
     {
         const shader_t *mShader;
-        const char *mModelPath;
+        const char *mModelName;
         int mPathLength;
 
         unsigned int mNumMaterials;

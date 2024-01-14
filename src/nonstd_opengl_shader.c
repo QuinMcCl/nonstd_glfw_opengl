@@ -11,7 +11,6 @@ int readFile(const char *filename, char **const buffer, long int *len)
 {
     FILE *fp = fopen(filename, "rb");
     if (fp != NULL)
-
         THROW_ERR((fp == NULL), "COULD NOT OPEN FILE", return retval);
 
     fseek(fp, 0, SEEK_END);
@@ -94,30 +93,6 @@ int shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPa
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 
-    unsigned int numAttributes = 0;
-    int lenAttributeMax = 0;
-    unsigned char *attributeNameBuffer = NULL;
-
-    glGetProgramiv(shader->ID, GL_ACTIVE_ATTRIBUTES, (GLint *)&numAttributes);
-    glGetProgramiv(shader->ID, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &lenAttributeMax);
-
-    shader->mNumAttributes = numAttributes;
-    lenAttributeMax++;
-
-    CHECK(hashmap_alloc(&(shader->mAttributeMap), NULL, numAttributes, numAttributes), return retval);
-    CHECK(safe_alloc((void **)&attributeNameBuffer, lenAttributeMax), return retval);
-    CHECK(safe_alloc((void **)&(shader->mAttributeList), shader->mNumAttributes * sizeof(shader_attrubute_t)), return retval);
-
-    for (unsigned long int i = 0; i < numAttributes; i++)
-    {
-        int len = 0;
-        glGetActiveAttrib(shader->ID, i, lenAttributeMax, &len, &(shader->mAttributeList[i].mAttributeSize), &(shader->mAttributeList[i].mAttributeType), (GLchar *)attributeNameBuffer);
-        long int location = glGetAttribLocation(shader->ID, (const char *)attributeNameBuffer);
-        CHECK(hashmap_add((void *)location, &(shader->mAttributeMap), attributeNameBuffer, len), return retval);
-    }
-
-    CHECK(safe_free((void **)&attributeNameBuffer, lenAttributeMax), return retval);
-
     return 0;
 }
 
@@ -128,9 +103,6 @@ int shader_free(shader_t *shader)
         glDeleteShader(shader->ID);
         shader->ID = GL_FALSE;
     }
-    CHECK(hashmap_free(&(shader->mAttributeMap)), return retval);
-    CHECK(safe_free((void **)&(shader->mAttributeList), shader->mNumAttributes * sizeof(shader_attrubute_t)), return retval);
-
     return 0;
 }
 

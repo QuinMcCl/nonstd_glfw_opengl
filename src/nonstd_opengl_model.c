@@ -5,6 +5,10 @@
 #define PP_ICL_PTCACHE_SIZE 12
 #define MAX_PATH_LENGTH 1026
 
+/*
+TODO glMultiDrawElementsIndirect
+*/
+
 #include <stdio.h>
 
 #include <GL/glew.h>
@@ -20,32 +24,18 @@
 #include "nonstd_opengl_texture.h"
 #include "nonstd_opengl_model.h"
 
-#define MODEL_LOADING_FLAGS                  \
-    aiProcess_CalcTangentSpace |             \
-        aiProcess_JoinIdenticalVertices |    \
-        aiProcess_Triangulate |              \
-        aiProcess_GenSmoothNormals |         \
-        aiProcess_SplitLargeMeshes |         \
-        aiProcess_LimitBoneWeights |         \
-        aiProcess_ValidateDataStructure |    \
-        aiProcess_ImproveCacheLocality |     \
-        aiProcess_RemoveRedundantMaterials | \
-        aiProcess_SortByPType |              \
-        aiProcess_FindDegenerates |          \
-        aiProcess_FindInvalidData |          \
-        aiProcess_GenUVCoords |              \
-        aiProcess_TransformUVCoords |        \
-        aiProcess_FindInstances |            \
-        aiProcess_OptimizeMeshes |           \
-        aiProcess_OptimizeGraph |            \
-        aiProcess_SplitByBoneCount |         \
-        aiProcess_Debone |                   \
-        aiProcess_GenBoundingBoxes
+#define MODEL_LOADING_FLAGS aiProcessPreset_TargetRealtime_MaxQuality
 
 static inline __attribute((always_inline)) void aiMat4ToCglmMat4(struct aiMatrix4x4 mat, mat4 dest)
 {
     memcpy(dest, &mat, sizeof(mat4));
 }
+
+#define X(N) #N, 
+const char *materialNames[] = {
+    XMATERIALS
+};
+#undef X
 
 int material_alloc(material_t *material, const char *rootpath, const struct aiMaterial *aiMaterial)
 {
@@ -60,8 +50,6 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
         {
             CHECK(safe_alloc((void **)&(material->mTextures[type]), TextureCount * sizeof(material_texture_t)), return retval);
             memset((void *)material->mTextures[type], 0, TextureCount * sizeof(material_texture_t));
-            // CHECK(safe_alloc((void **)&(material->mTextureIndex[type]), TextureCount * sizeof(unsigned long int)), return retval);
-            // memset((void *)material->mTextureIndex[type], 0, TextureCount * sizeof(unsigned long int));
         }
 
         for (unsigned int index = 0; index < TextureCount; index++)
@@ -88,6 +76,7 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
 
             texture_data->mTextureIndex = (unsigned long)-1l;
             CHECK(get_load_texture(&(texture_data->mTextureIndex), file_path, path_length), return retval);
+            snprintf((char *)texture_data->name, 1023, "Material.%s[%d]", materialNames[type], index);
         }
     }
     return 0;
@@ -105,7 +94,7 @@ int material_free(material_t *material)
     return 0;
 }
 
-int mesh_alloc(mesh_t *mesh, shader_t *shader, struct aiMesh *aiMesh)
+int mesh_alloc(mesh_t *mesh, struct aiMesh *aiMesh)
 {
     if (aiMesh->mNumFaces <= 0)
     {
@@ -154,182 +143,48 @@ int mesh_alloc(mesh_t *mesh, shader_t *shader, struct aiMesh *aiMesh)
             }
         }
 
+        glGenBuffers(sizeof(mesh->mBuffers) / sizeof(unsigned int), (unsigned int *)&(mesh->mBuffers));
+
         if (mesh->mNumElements > 0 && aiMesh->mFaces != NULL)
         {
-            glGenBuffers(1, &(mesh->mElementBuffer));
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->mElementBuffer);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->mBuffers.mElementBuffer);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->mNumElements * sizeof(unsigned int), NULL, GL_STATIC_DRAW);
             unsigned int offset = 0;
 
             for (unsigned int i = 0; i < aiMesh->mNumFaces; i++)
             {
                 unsigned int face_size = aiMesh->mFaces[i].mNumIndices * sizeof(unsigned int);
-                // for(unsigned int j = 0; j < aiMesh->mFaces[i].mNumIndices; j++)
-                // {
-                //     fprintf(stderr, "%u ", aiMesh->mFaces[i].mIndices[j]);
-                // }
-                // fprintf(stderr, "\n");
-
                 glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, face_size, aiMesh->mFaces[i].mIndices);
                 offset += face_size;
             }
         }
 
-        if (aiMesh->mVertices != NULL)
         {
-
-            // for(unsigned int j = 0; j < aiMesh->mNumVertices; j++)
-            // {
-            //     fprintf(stderr, "%u: %f,%f,%f\n",j, aiMesh->mVertices[j].x,aiMesh->mVertices[j].y,aiMesh->mVertices[j].z);
-            // }
-
-            glGenBuffers(1, &(mesh->mVertexBuffer));
-            glBindBuffer(GL_ARRAY_BUFFER, mesh->mVertexBuffer);
-            glBufferData(GL_ARRAY_BUFFER, aiMesh->mNumVertices * sizeof(struct aiVector3D), aiMesh->mVertices, GL_STATIC_DRAW);
-
-            long int index = -1l;
-            CHECK(hashmap_find((void **)&index, &(shader->mAttributeMap), (unsigned char *)"aPosition", 9), return retval);
-
-            if (index > -1l)
-            {
-                glEnableVertexAttribArray(index);
-                glVertexAttribPointer(
-                    index,                     // Attribute Index
-                    3,                         // attribute size
-                    GL_FLOAT,                  // attribute type
-                    GL_FALSE,                  // should be normalized
-                    sizeof(struct aiVector3D), // attribute stride
-                    (void *)0                  // attribute offset
-                );
-            }
-        }
-
-        if (aiMesh->mNormals != NULL)
-        {
-            glGenBuffers(1, &(mesh->mNormalBuffer));
-            glBindBuffer(GL_ARRAY_BUFFER, mesh->mNormalBuffer);
-            glBufferData(GL_ARRAY_BUFFER, aiMesh->mNumVertices * sizeof(struct aiVector3D), aiMesh->mNormals, GL_STATIC_DRAW);
-
-            long int index = -1l;
-            CHECK(hashmap_find((void **)&index, &(shader->mAttributeMap), (unsigned char *)"aNormal", 7), return retval);
-
-            if (index > -1l)
-            {
-                glEnableVertexAttribArray(index);
-                glVertexAttribPointer(
-                    index,                     // Attribute Index
-                    3,                         // attribute size
-                    GL_FLOAT,                  // attribute type
-                    GL_FALSE,                  // should be normalized
-                    sizeof(struct aiVector3D), // attribute stride
-                    (void *)0                  // attribute offset
-                );
-            }
-        }
-
-        if (aiMesh->mTangents != NULL)
-        {
-            glGenBuffers(1, &(mesh->mTangentBuffer));
-            glBindBuffer(GL_ARRAY_BUFFER, mesh->mTangentBuffer);
-            glBufferData(GL_ARRAY_BUFFER, aiMesh->mNumVertices * sizeof(struct aiVector3D), aiMesh->mTangents, GL_STATIC_DRAW);
-
-            long int index = -1l;
-            CHECK(hashmap_find((void **)&index, &(shader->mAttributeMap), (unsigned char *)"aTangent", 8), return retval);
-
-            if (index > -1l)
-            {
-                glEnableVertexAttribArray(index);
-                glVertexAttribPointer(
-                    index,                     // Attribute Index
-                    3,                         // attribute size
-                    GL_FLOAT,                  // attribute type
-                    GL_FALSE,                  // should be normalized
-                    sizeof(struct aiVector3D), // attribute stride
-                    (void *)0                  // attribute offset
-                );
-            }
-        }
-
-        if (aiMesh->mBitangents != NULL)
-        {
-            glGenBuffers(1, &(mesh->mBitTangentBuffer));
-            glBindBuffer(GL_ARRAY_BUFFER, mesh->mBitTangentBuffer);
-            glBufferData(GL_ARRAY_BUFFER, aiMesh->mNumVertices * sizeof(struct aiVector3D), aiMesh->mBitangents, GL_STATIC_DRAW);
-
-            long int index = -1l;
-            CHECK(hashmap_find((void **)&index, &(shader->mAttributeMap), (unsigned char *)"aBitTangent", 11), return retval);
-
-            if (index > -1l)
-            {
-                glEnableVertexAttribArray(index);
-                glVertexAttribPointer(
-                    index,                     // Attribute Index
-                    3,                         // attribute size
-                    GL_FLOAT,                  // attribute type
-                    GL_FALSE,                  // should be normalized
-                    sizeof(struct aiVector3D), // attribute stride
-                    (void *)0                  // attribute offset
-                );
-            }
-        }
-
-        for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_COLOR_SETS; i++)
-        {
-            if (aiMesh->mColors[i] != NULL)
-            {
-                glGenBuffers(1, &(mesh->mColorBuffers[i]));
-                glBindBuffer(GL_ARRAY_BUFFER, mesh->mColorBuffers[i]);
-                glBufferData(GL_ARRAY_BUFFER, aiMesh->mNumVertices * sizeof(struct aiColor4D), aiMesh->mColors[i], GL_STATIC_DRAW);
-
-                // TODO MULTIPLE COLORS
-                long int index = -1l;
-                CHECK(hashmap_find((void **)&index, &(shader->mAttributeMap), (unsigned char *)"aColor0", 7), return retval);
-
-                if (index > -1l)
-                {
-                    glEnableVertexAttribArray(index);
-                    glVertexAttribPointer(
-                        index,                    // Attribute Index
-                        4,                        // attribute size
-                        GL_FLOAT,                 // attribute type
-                        GL_FALSE,                 // should be normalized
-                        sizeof(struct aiColor4D), // attribute stride
-                        (void *)0                 // attribute offset
-                    );
-                }
-            }
-        }
-
-        for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++)
-        {
-            if (aiMesh->mTextureCoords[i] != NULL)
-            {
-
-                // for (unsigned int j = 0; j < aiMesh->mNumVertices; j++)
-                // {
-                //     fprintf(stderr, "%u: %f,%f,%f\n", j, aiMesh->mTextureCoords[i][j].x, aiMesh->mTextureCoords[i][j].y, aiMesh->mTextureCoords[i][j].z);
-                // }
-                glGenBuffers(1, &(mesh->mTexCoordBuffers[i]));
-                glBindBuffer(GL_ARRAY_BUFFER, mesh->mTexCoordBuffers[i]);
-                glBufferData(GL_ARRAY_BUFFER, aiMesh->mNumVertices * sizeof(struct aiVector3D), aiMesh->mTextureCoords[i], GL_STATIC_DRAW);
-
-                // TODO MULTIPLE TEXT COORDS
-                long int index = -1l;
-                CHECK(hashmap_find((void **)&index, &(shader->mAttributeMap), (unsigned char *)"aTexCoord0", 10), return retval);
-
-                if (index > -1l)
-                {
-                    glEnableVertexAttribArray(index);
-                    glVertexAttribPointer(
-                        index,                     // Attribute Index
-                        2,                         // attribute size
-                        GL_FLOAT,                  // attribute type
-                        GL_FALSE,                  // should be normalized
-                        sizeof(struct aiVector3D), // attribute stride
-                        (void *)0                  // attribute offset
-                    );
-                }
-            }
+#define X(L, I, S, N)                                  \
+    do                                                 \
+    {                                                  \
+        if (aiMesh->N != NULL)                       \
+        {                                              \
+            glBindBuffer(                              \
+                GL_ARRAY_BUFFER,                       \
+                mesh->mBuffers.L);                   \
+            glBufferData(                              \
+                GL_ARRAY_BUFFER,                       \
+                aiMesh->mNumVertices * sizeof(vec##S), \
+                aiMesh->N,                           \
+                GL_STATIC_DRAW);                       \
+            glEnableVertexAttribArray(I);              \
+            glVertexAttribPointer(                     \
+                I,                                     \
+                S,                                     \
+                GL_FLOAT,                              \
+                GL_FALSE,                              \
+                sizeof(vec##S),                        \
+                (void *)0);                            \
+        }                                              \
+    } while (0);
+            XLAYOUTS
+#undef X
         }
     }
 
@@ -343,21 +198,7 @@ int mesh_alloc(mesh_t *mesh, shader_t *shader, struct aiMesh *aiMesh)
 int mesh_free(mesh_t *mesh)
 {
 
-    glDeleteBuffers(1, &(mesh->mElementBuffer));
-    glDeleteBuffers(1, &(mesh->mVertexBuffer));
-    glDeleteBuffers(1, &(mesh->mNormalBuffer));
-    glDeleteBuffers(1, &(mesh->mTangentBuffer));
-    glDeleteBuffers(1, &(mesh->mBitTangentBuffer));
-
-    for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_COLOR_SETS; i++)
-    {
-        glDeleteBuffers(1, &(mesh->mColorBuffers[i]));
-    }
-
-    for (unsigned int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++)
-    {
-        glDeleteBuffers(1, &(mesh->mTexCoordBuffers[i]));
-    }
+    glDeleteBuffers(sizeof(mesh->mBuffers) / sizeof(unsigned int), (unsigned int *)&(mesh->mBuffers));
 
     glDeleteVertexArrays(1, &(mesh->mVAO));
 
@@ -432,7 +273,7 @@ int model_node_update_mesh_transforms(model_node_t *node, model_t *model, mat4 t
 int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const char *model_name, const int path_length)
 {
     model->mShader = shader;
-    model->mModelPath = model_name;
+    model->mModelName = model_name;
     model->mPathLength = path_length;
     // Start the import on the given file with some example postprocessing
     // Usually - if speed is not the most important aspect for you - you'll t
@@ -488,7 +329,7 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
 
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
-        CHECK(mesh_alloc(&(model->mMeshList[i]), shader, scene->mMeshes[i]), return retval);
+        CHECK(mesh_alloc(&(model->mMeshList[i]), scene->mMeshes[i]), return retval);
     }
 
     model_node_alloc(&(model->mRootNode), NULL, model, scene->mRootNode);
@@ -521,7 +362,7 @@ int model_free(model_t *model)
 
     CHECK(model_node_free(&(model->mRootNode)), return retval);
 
-    model->mModelPath = NULL;
+    model->mModelName = NULL;
     model->mPathLength = 0;
     return 0;
 }
@@ -543,14 +384,11 @@ int material_draw(material_t *material, model_t *model)
     {
         for (unsigned int index = 0; index < material->mTextureCount[type]; index++)
         {
-            char name_buffer[1024];
-            memset(name_buffer, 0, 1024);
+            material_texture_t *texture_data = &(material->mTextures[type][index]);
 
             int unit = -1;
-            CHECK(texture_activate(material->mTextures[type][index].mTextureIndex, &unit), return retval);
-
-            snprintf(name_buffer, 1023, "Material.%s[%d]", materialNames[type], index);
-            CHECK(shader_set(model->mShader, name_buffer, I1, 1, &unit), return retval);
+            CHECK(texture_activate(texture_data->mTextureIndex, &unit), return retval);
+            CHECK(shader_set(model->mShader, texture_data->name, I1, 1, &unit), return retval);
         }
     }
 
