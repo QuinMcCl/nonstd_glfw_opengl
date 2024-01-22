@@ -26,13 +26,14 @@ int camera_alloc(
     camera->mAspect = aspect;
     camera->mFOV = fov;
     camera->projection_type = PERSPECTIVE;
-    camera->mMouseSensitivity =  0.01f;
+    camera->mMouseSensitivity = 0.01f;
 
     glm_vec3_copy(position, camera->mPosition);
     glm_vec3_copy(up, camera->mWorldUp);
 
     CHECK(nonstd_opengl_ubo_init(&(camera->mViewProjection), "uboViewProjection", 2 * sizeof(mat4), GL_STREAM_DRAW), return retval);
-
+    CHECK(nonstd_opengl_ubo_init(&(camera->mViewPosition), "uboViewPosition", sizeof(vec3), GL_STREAM_DRAW), return retval);
+    
     return 0;
 }
 
@@ -44,6 +45,7 @@ int camera_free(camera_t *camera)
 
 int camera_update_view_projection(camera_t *camera)
 {
+    CHECK(nonstd_opengl_ubo_fill(&(camera->mViewPosition), camera->mPosition, sizeof(vec3), 0), return retval);
     camera->front[0] = cos(glm_rad(camera->mYaw)) * cos(glm_rad(camera->mPitch));
     camera->front[1] = sin(glm_rad(camera->mPitch));
     camera->front[2] = sin(glm_rad(camera->mYaw)) * cos(glm_rad(camera->mPitch));

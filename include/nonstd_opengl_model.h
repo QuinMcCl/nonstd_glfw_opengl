@@ -87,7 +87,7 @@ extern "C"
     int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const char *model_path, const int path_length);
     int model_free(model_t *model);
 
-    int model_draw(model_t *model);
+    int model_draw(model_t *model, mat4 transform);
 
 #ifdef __cplusplus
 } /* extern "C" */

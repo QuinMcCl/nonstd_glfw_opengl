@@ -30,6 +30,7 @@ extern "C"
         float mAspect;
         float mFOV;
         nonstd_opengl_ubo_t mViewProjection;
+        nonstd_opengl_ubo_t mViewPosition;
 
 
         vec3 front;

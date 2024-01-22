@@ -1,8 +1,3 @@
-#define AI_CONFIG_PP_GSN_MAX_SMOOTHING_ANGLE 80.0
-#define AI_SLM_DEFAULT_MAX_VERTICES 1000000
-#define AI_SLM_DEFAULT_MAX_TRIANGLES 1000000
-#define AI_LMW_MAX_WEIGHTS 4
-#define PP_ICL_PTCACHE_SIZE 12
 #define MAX_PATH_LENGTH 1026
 
 /*
@@ -399,10 +394,9 @@ int material_draw(material_t *material, model_t *model)
     return 0;
 }
 
-int model_draw(model_t *model)
+int model_draw(model_t *model, mat4 transform)
 {
 
-    mat4 transform = GLM_MAT4_IDENTITY_INIT;
     model_node_update_mesh_transforms(&(model->mRootNode), model, transform);
 
     CHECK(shader_use(model->mShader), return retval);
