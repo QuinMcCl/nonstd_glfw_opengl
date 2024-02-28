@@ -32,7 +32,6 @@ extern "C"
         nonstd_opengl_ubo_t mViewProjection;
         nonstd_opengl_ubo_t mViewPosition;
 
-
         vec3 front;
         vec3 up;
         mat4 mView;

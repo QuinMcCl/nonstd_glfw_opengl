@@ -1,23 +1,35 @@
 #include <GL/glew.h>
-
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
 #include "nonstd.h"
 #include "nonstd_opengl_buffer.h"
 
-freelist_t binding_points;
+pthread_mutex_t lock_binding_point_array;
+long int max_binding_points = 0;
+long int index_binding_point = -1;
+long int *binding_point_array = NULL;
+
 int bindingpoints_initialized = GL_FALSE;
 
 int nonstd_opengl_ubo_bindingpoints_alloc()
 {
     if (bindingpoints_initialized == GL_TRUE)
         return 0;
-    long int max_binding_points = 0;
     glGetInteger64v(GL_MAX_UNIFORM_BUFFER_BINDINGS, &max_binding_points);
+    CHECK_ERR(max_binding_points <= 0
+                  ? EPERM
+                  : EXIT_SUCCESS,
+              strerror(errno), return errno);
 
-#ifdef ERROR_CHECKING
-    THROW_ERR((max_binding_points <= 0), "INVALID MAX BINDING POINTS", return retval);
-#endif
+    CHECK_ERR(safe_alloc((void **)&binding_point_array, max_binding_points * sizeof(long int)), strerror(errno), return errno);
 
-    CHECK(freelist_alloc(&binding_points, max_binding_points, sizeof(unsigned long int)), return retval);
+    for (long int index = 0; index < max_binding_points; index++)
+    {
+        binding_point_array[index] = index;
+    }
+    index_binding_point = 0;
+
     bindingpoints_initialized = GL_TRUE;
     return 0;
 }
@@ -26,21 +38,31 @@ int nonstd_opengl_ubo_bindingpoints_free()
 {
     if (bindingpoints_initialized != GL_TRUE)
         return 0;
-    CHECK(freelist_free(&binding_points), return retval);
+    CHECK_ERR(safe_free((void **)&binding_point_array, max_binding_points * sizeof(long int)), strerror(errno), return errno);
+    index_binding_point = -1;
+    max_binding_points = 0;
     bindingpoints_initialized = GL_FALSE;
     return 0;
 }
 
 int nonstd_opengl_ubo_init(nonstd_opengl_ubo_t *ubo, const char *name, const unsigned int maxSize, unsigned int usage)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR((bindingpoints_initialized != GL_TRUE), "INITIALIZE BINDING POINTS FIRST", return retval);
-    THROW_ERR((ubo == NULL), "NULL UBO PTR", return retval);
-    THROW_ERR((name == NULL), "NULL name PTR", return retval);
-    THROW_ERR((maxSize == 0), "ZERO maxSize", return retval);
-#endif
-    unsigned long int next_free = -1;
-    CHECK(freelist_aquire(&(next_free), &binding_points), return retval);
+    CHECK_ERR(
+        bindingpoints_initialized != GL_TRUE || ubo == NULL || name == NULL || maxSize == 0
+            ? EINVAL
+            : EXIT_SUCCESS,
+        strerror(errno), return errno);
+
+    long int next_free = -1;
+    CHECK_ERR(pthread_mutex_lock(&(lock_binding_point_array)), strerror(errno), return errno);
+    if (index_binding_point < 0 || index_binding_point >= max_binding_points)
+    {
+        pthread_mutex_unlock(&(lock_binding_point_array));
+        return -1;
+    }
+    next_free = binding_point_array[index_binding_point++];
+    CHECK_ERR(pthread_mutex_unlock(&(lock_binding_point_array)), strerror(errno), return errno);
+
     ubo->bindingPoint = next_free;
     ubo->uboBlock = GL_FALSE;
     ubo->maxSize = maxSize;
@@ -59,12 +81,25 @@ int nonstd_opengl_ubo_init(nonstd_opengl_ubo_t *ubo, const char *name, const uns
 
 int nonstd_opengl_ubo_cleanup(nonstd_opengl_ubo_t *ubo)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR((bindingpoints_initialized != GL_TRUE), "INITIALIZE BINDING POINTS FIRST", return retval);
-    THROW_ERR((ubo == NULL), "NULL UBO PTR", return retval);
-#endif
-    unsigned long int last_free = ubo->bindingPoint;
-    CHECK(freelist_release(&(last_free), &binding_points), return retval);
+    CHECK_ERR(
+        bindingpoints_initialized != GL_TRUE || ubo == NULL
+            ? EINVAL
+            : EXIT_SUCCESS,
+        strerror(errno), return errno);
+    int retval = 0;
+    CHECK_ERR(pthread_mutex_lock(&(lock_binding_point_array)), strerror(errno), return errno);
+    if (ubo->bindingPoint < 0 || ubo->bindingPoint >= max_binding_points)
+    {
+        retval = EINVAL;
+    }
+    else
+    {
+        binding_point_array[--index_binding_point] = ubo->bindingPoint;
+    }
+    CHECK_ERR(pthread_mutex_unlock(&(lock_binding_point_array)), strerror(errno), return errno);
+
+    CHECK_ERR(retval, strerror(errno), return errno);
+
     glDeleteBuffers(1, &(ubo->uboBlock));
     ubo->uboBlock = GL_FALSE;
     ubo->maxSize = 0;
@@ -75,34 +110,15 @@ int nonstd_opengl_ubo_cleanup(nonstd_opengl_ubo_t *ubo)
 
 int nonstd_opengl_ubo_fill(nonstd_opengl_ubo_t *ubo, const void *items, unsigned int size, unsigned int offset)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR((bindingpoints_initialized != GL_TRUE), "INITIALIZE BINDING POINTS FIRST", return retval);
-    THROW_ERR((ubo == NULL), "NULL UBO PTR", return retval);
-    THROW_ERR((size + offset > ubo->maxSize), "BUFFER OVERFLOW", return retval);
-#endif
+    CHECK_ERR(
+        bindingpoints_initialized != GL_TRUE || ubo == NULL || size + offset > ubo->maxSize
+            ? EINVAL
+            : EXIT_SUCCESS,
+        strerror(errno), return errno);
+
     // fill the buffer
     glBindBuffer(GL_UNIFORM_BUFFER, ubo->uboBlock);
     glBufferSubData(GL_UNIFORM_BUFFER, offset, size, items);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
-    return 0;
-}
-
-int nonstd_opengl_ubo_getName(nonstd_opengl_ubo_t *ubo, const char **buffer)
-{
-#ifdef ERROR_CHECKING
-    THROW_ERR((bindingpoints_initialized != GL_TRUE), "INITIALIZE BINDING POINTS FIRST", return retval);
-    THROW_ERR((ubo == NULL), "NULL UBO PTR", return retval);
-#endif
-    *buffer = ubo->name;
-    return 0;
-}
-
-int nonstd_opengl_ubo_getBlockBindingIndex(nonstd_opengl_ubo_t *ubo, unsigned int *index)
-{
-#ifdef ERROR_CHECKING
-    THROW_ERR((bindingpoints_initialized != GL_TRUE), "INITIALIZE BINDING POINTS FIRST", return retval);
-    THROW_ERR((ubo == NULL), "NULL UBO PTR", return retval);
-#endif
-    *index = ubo->bindingPoint;
     return 0;
 }

@@ -13,6 +13,9 @@ TODO glMultiDrawElementsIndirect
 #include <assimp/postprocess.h>
 
 #include <cglm/cglm.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #include "nonstd.h"
 #include "nonstd_opengl_shader.h"
@@ -26,10 +29,9 @@ static inline __attribute((always_inline)) void aiMat4ToCglmMat4(struct aiMatrix
     memcpy(dest, &mat, sizeof(mat4));
 }
 
-#define X(N) #N, 
+#define X(N) #N,
 const char *materialNames[] = {
-    XMATERIALS
-};
+    XMATERIALS};
 #undef X
 
 int material_alloc(material_t *material, const char *rootpath, const struct aiMaterial *aiMaterial)
@@ -43,7 +45,7 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
 
         if (TextureCount > 0)
         {
-            CHECK(safe_alloc((void **)&(material->mTextures[type]), TextureCount * sizeof(material_texture_t)), return retval);
+            CHECK_ERR(safe_alloc((void **)&(material->mTextures[type]), TextureCount * sizeof(material_texture_t)), strerror(errno), return errno);
             memset((void *)material->mTextures[type], 0, TextureCount * sizeof(material_texture_t));
         }
 
@@ -69,8 +71,8 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
             if (path_length > MAX_PATH_LENGTH)
                 path_length = MAX_PATH_LENGTH;
 
-            texture_data->mTextureIndex = (unsigned long)-1l;
-            CHECK(get_load_texture(&(texture_data->mTextureIndex), file_path, path_length), return retval);
+            texture_data->mTexturePtr = NULL;
+            CHECK_ERR(get_load_texture(&(texture_data->mTexturePtr), file_path, path_length), strerror(errno), return errno);
             snprintf((char *)texture_data->name, 1023, "Material.%s[%d]", materialNames[type], index);
         }
     }
@@ -83,7 +85,7 @@ int material_free(material_t *material)
     {
         if (material->mTextureCount[type] > 0)
         {
-            CHECK(safe_free((void **)&(material->mTextures[type]), material->mTextureCount[type] * sizeof(material_texture_t)), return retval);
+            CHECK_ERR(safe_free((void **)&(material->mTextures[type]), material->mTextureCount[type] * sizeof(material_texture_t)), strerror(errno), return errno);
         }
     }
     return 0;
@@ -158,15 +160,15 @@ int mesh_alloc(mesh_t *mesh, struct aiMesh *aiMesh)
 #define X(L, I, S, N)                                  \
     do                                                 \
     {                                                  \
-        if (aiMesh->N != NULL)                       \
+        if (aiMesh->N != NULL)                         \
         {                                              \
             glBindBuffer(                              \
                 GL_ARRAY_BUFFER,                       \
-                mesh->mBuffers.L);                   \
+                mesh->mBuffers.L);                     \
             glBufferData(                              \
                 GL_ARRAY_BUFFER,                       \
                 aiMesh->mNumVertices * sizeof(vec##S), \
-                aiMesh->N,                           \
+                aiMesh->N,                             \
                 GL_STATIC_DRAW);                       \
             glEnableVertexAttribArray(I);              \
             glVertexAttribPointer(                     \
@@ -207,7 +209,7 @@ int model_node_alloc(model_node_t *node, model_node_t *parent_node, model_t *mod
     node->mNumMeshes = aiNode->mNumMeshes;
     if (node->mNumMeshes > 0)
     {
-        CHECK(safe_alloc((void **)&(node->mMeshData), node->mNumMeshes * sizeof(node_mesh_data_t)), return retval);
+        CHECK_ERR(safe_alloc((void **)&(node->mMeshData), node->mNumMeshes * sizeof(node_mesh_data_t)), strerror(errno), return errno);
         memset(node->mMeshData, 0, node->mNumMeshes * sizeof(node_mesh_data_t));
     }
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -219,7 +221,7 @@ int model_node_alloc(model_node_t *node, model_node_t *parent_node, model_t *mod
     node->mNumChildren = aiNode->mNumChildren;
     if (node->mNumChildren > 0)
     {
-        CHECK(safe_alloc((void **)&(node->mChildren), node->mNumChildren * sizeof(model_node_t)), return retval);
+        CHECK_ERR(safe_alloc((void **)&(node->mChildren), node->mNumChildren * sizeof(model_node_t)), strerror(errno), return errno);
         memset(node->mChildren, 0, node->mNumChildren * sizeof(model_node_t));
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
@@ -239,11 +241,11 @@ int model_node_free(model_node_t *node)
     }
     if (node->mNumMeshes > 0)
     {
-        CHECK(safe_free((void **)&(node->mMeshData), node->mNumMeshes * sizeof(node_mesh_data_t)), return retval);
+        CHECK_ERR(safe_free((void **)&(node->mMeshData), node->mNumMeshes * sizeof(node_mesh_data_t)), strerror(errno), return errno);
     }
     if (node->mNumChildren > 0)
     {
-        CHECK(safe_free((void **)&(node->mChildren), node->mNumChildren * sizeof(model_node_t)), return retval);
+        CHECK_ERR(safe_free((void **)&(node->mChildren), node->mNumChildren * sizeof(model_node_t)), strerror(errno), return errno);
     }
     return 0;
 }
@@ -279,25 +281,23 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
     const struct aiScene *scene = aiImportFile(file_path, MODEL_LOADING_FLAGS);
 
     // If the import failed, report it
-#ifdef ERROR_CHECKING
-    THROW_ERR((NULL == scene), aiGetErrorString(), return retval);
-#endif
+    CHECK_ERR((NULL == scene), aiGetErrorString(), return EINVAL);
 
-    // THROW_ERR((scene->mFlags && AI_SCENE_FLAGS_INCOMPLETE), "INCOMPLETE SCENE", return retval);
-    THROW_ERR(!(scene->mFlags && AI_SCENE_FLAGS_VALIDATED), "INVALID SCENE", return retval);
-    // THROW_ERR((scene->mFlags && AI_SCENE_FLAGS_VALIDATION_WARNING), "INVALID SCENE", return retval);
+    // CHECK_ERR((scene->mFlags && AI_SCENE_FLAGS_INCOMPLETE), "INCOMPLETE SCENE", return EINVAL);
+    CHECK_ERR(!(scene->mFlags && AI_SCENE_FLAGS_VALIDATED), "INVALID SCENE", return EINVAL);
+    // CHECK_ERR((scene->mFlags && AI_SCENE_FLAGS_VALIDATION_WARNING), "INVALID SCENE", return EINVAL);
 
     // Now we can access the file's contents
     // DoTheSceneProcessing(scene);
-    THROW_ERR((scene->mNumMaterials == 0), "NO MATERIALS IN SCENE", return retval);
+    CHECK_ERR((scene->mNumMaterials == 0), "NO MATERIALS IN SCENE", return EINVAL);
 
     model->mNumMaterials = scene->mNumMaterials;
-    CHECK(safe_alloc((void **)&(model->mMaterialList), model->mNumMaterials * sizeof(material_t)), return retval);
+    CHECK_ERR(safe_alloc((void **)&(model->mMaterialList), model->mNumMaterials * sizeof(material_t)), strerror(errno), return errno);
     memset((void *)model->mMaterialList, 0, model->mNumMaterials * sizeof(material_t));
 
     for (unsigned int i = 0; i < model->mNumMaterials; i++)
     {
-        CHECK(material_alloc(&(model->mMaterialList[i]), rootpath, scene->mMaterials[i]), return retval);
+        CHECK_ERR(material_alloc(&(model->mMaterialList[i]), rootpath, scene->mMaterials[i]), strerror(errno), return errno);
 
         model->mMaterialList[i].mNumMeshes = 0;
         for (unsigned int j = 0; j < scene->mNumMeshes; j++)
@@ -307,7 +307,7 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
                 model->mMaterialList[i].mNumMeshes++;
             }
         }
-        CHECK(safe_alloc((void **)&(model->mMaterialList[i].mMeshes), model->mMaterialList[i].mNumMeshes * sizeof(unsigned int)), return retval);
+        CHECK_ERR(safe_alloc((void **)&(model->mMaterialList[i].mMeshes), model->mMaterialList[i].mNumMeshes * sizeof(unsigned int)), strerror(errno), return errno);
         unsigned int index = 0;
         for (unsigned int j = 0; j < scene->mNumMeshes; j++)
         {
@@ -319,19 +319,19 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
     }
 
     model->mNumMeshes = scene->mNumMeshes;
-    CHECK(safe_alloc((void **)&(model->mMeshList), scene->mNumMeshes * sizeof(mesh_t)), return retval);
+    CHECK_ERR(safe_alloc((void **)&(model->mMeshList), scene->mNumMeshes * sizeof(mesh_t)), strerror(errno), return errno);
     memset((void *)model->mMeshList, 0, model->mNumMeshes * sizeof(mesh_t));
 
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
-        CHECK(mesh_alloc(&(model->mMeshList[i]), scene->mMeshes[i]), return retval);
+        CHECK_ERR(mesh_alloc(&(model->mMeshList[i]), scene->mMeshes[i]), strerror(errno), return errno);
     }
 
     model_node_alloc(&(model->mRootNode), NULL, model, scene->mRootNode);
 
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
-        CHECK(safe_alloc((void **)&(model->mMeshList[i].mTransformation), model->mMeshList[i].mNumInstances * sizeof(mat4)), return retval);
+        CHECK_ERR(safe_alloc((void **)&(model->mMeshList[i].mTransformation), model->mMeshList[i].mNumInstances * sizeof(mat4)), strerror(errno), return errno);
         memset((void *)model->mMeshList[i].mTransformation, 0, model->mMeshList[i].mNumInstances * sizeof(mat4));
     }
 
@@ -345,17 +345,17 @@ int model_free(model_t *model)
 {
     for (unsigned int i = 0; i < model->mNumMaterials; i++)
     {
-        CHECK(material_free(&(model->mMaterialList[i])), return retval);
+        CHECK_ERR(material_free(&(model->mMaterialList[i])), strerror(errno), return errno);
     }
-    CHECK(safe_free((void **)&(model->mMaterialList), model->mNumMaterials * sizeof(material_t)), return retval);
+    CHECK_ERR(safe_free((void **)&(model->mMaterialList), model->mNumMaterials * sizeof(material_t)), strerror(errno), return errno);
 
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
-        CHECK(mesh_free(&(model->mMeshList[i])), return retval);
+        CHECK_ERR(mesh_free(&(model->mMeshList[i])), strerror(errno), return errno);
     }
-    CHECK(safe_free((void **)&(model->mMeshList), model->mNumMeshes * sizeof(mesh_t)), return retval);
+    CHECK_ERR(safe_free((void **)&(model->mMeshList), model->mNumMeshes * sizeof(mesh_t)), strerror(errno), return errno);
 
-    CHECK(model_node_free(&(model->mRootNode)), return retval);
+    CHECK_ERR(model_node_free(&(model->mRootNode)), strerror(errno), return errno);
 
     model->mModelName = NULL;
     model->mPathLength = 0;
@@ -365,7 +365,7 @@ int model_free(model_t *model)
 int mesh_draw(mesh_t *mesh, const shader_t *shader)
 {
     // draw mesh
-    CHECK(shader_set(shader, "model", M4, mesh->mNumInstances, mesh->mTransformation), return retval);
+    CHECK_ERR(shader_set(shader, "model", M4, mesh->mNumInstances, mesh->mTransformation), strerror(errno), return errno);
     glBindVertexArray(mesh->mVAO);
     glDrawElementsInstanced(GL_TRIANGLES, mesh->mNumElements, GL_UNSIGNED_INT, 0, mesh->mNumInstances);
     glBindVertexArray(0);
@@ -382,14 +382,14 @@ int material_draw(material_t *material, model_t *model)
             material_texture_t *texture_data = &(material->mTextures[type][index]);
 
             int unit = -1;
-            CHECK(texture_activate(texture_data->mTextureIndex, &unit), return retval);
-            CHECK(shader_set(model->mShader, texture_data->name, I1, 1, &unit), return retval);
+            CHECK_ERR(texture_activate(texture_data->mTexturePtr, &unit), strerror(errno), return errno);
+            CHECK_ERR(shader_set(model->mShader, texture_data->name, I1, 1, &unit), strerror(errno), return errno);
         }
     }
 
     for (unsigned int j = 0; j < material->mNumMeshes; j++)
     {
-        CHECK(mesh_draw(&(model->mMeshList[material->mMeshes[j]]), model->mShader), return retval);
+        CHECK_ERR(mesh_draw(&(model->mMeshList[material->mMeshes[j]]), model->mShader), strerror(errno), return errno);
     }
     return 0;
 }
@@ -399,10 +399,10 @@ int model_draw(model_t *model, mat4 transform)
 
     model_node_update_mesh_transforms(&(model->mRootNode), model, transform);
 
-    CHECK(shader_use(model->mShader), return retval);
+    CHECK_ERR(shader_use(model->mShader), strerror(errno), return errno);
     for (unsigned int i = 0; i < model->mNumMaterials; i++)
     {
-        CHECK(material_draw(&(model->mMaterialList[i]), model), return retval);
+        CHECK_ERR(material_draw(&(model->mMaterialList[i]), model), strerror(errno), return errno);
     }
 
     return 0;

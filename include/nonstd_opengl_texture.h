@@ -24,10 +24,10 @@ extern "C"
 
     int texture_alloc(texture_t *texture, const char *filePath);
     int texture_free(texture_t *texture);
-    int texture_activate(unsigned long int loaded_texture_index, int *unit);
-    int texture_deactivate(unsigned long int loaded_texture_index);
+    int texture_activate(texture_t *texture, int *unit);
+    int texture_deactivate(texture_t *texture);
 
-    int get_load_texture(unsigned long int *loaded_texture_index, char *filePath, unsigned long path_length);
+    int get_load_texture(texture_t **ptr_texture, char *filePath, unsigned long path_length);
     int unload_texture(char *filePath, unsigned long path_length);
 
 #ifdef __cplusplus

@@ -8,7 +8,7 @@ extern "C"
     typedef struct nonstd_opengl_ubo_s
     {
 
-        unsigned int bindingPoint;
+        int bindingPoint;
         unsigned int uboBlock;
         unsigned int maxSize;
         unsigned int usage;
@@ -22,11 +22,6 @@ extern "C"
     int nonstd_opengl_ubo_cleanup(nonstd_opengl_ubo_t *ubo);
 
     int nonstd_opengl_ubo_fill(nonstd_opengl_ubo_t *ubo, const void *items, unsigned int size, unsigned int offset);
-
-    int nonstd_opengl_ubo_getName(nonstd_opengl_ubo_t *ubo, const char **buffer);
-
-    int nonstd_opengl_ubo_getBlockBindingIndex(nonstd_opengl_ubo_t *ubo, unsigned int *index);
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

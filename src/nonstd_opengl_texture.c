@@ -2,13 +2,26 @@
 
 #include <stb/stb_image.h>
 #include <string.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #include <nonstd.h>
 #include "nonstd_opengl_texture.h"
 
-freelist_t texture_units;
-freelist_t loaded_texture_list;
-hashmap_t loaded_textures_map;
+pthread_mutex_t lock_texture_unit_array = {0};
+long int max_texture_image_units = 0;
+long int index_texture_image_unit = -1;
+long int *texture_image_unit_array = NULL;
+
+texture_t *loaded_texture_array = NULL;
+unsigned long max_num_textures = 0;
+long int index_texture = -1;
+
+freelist_t loaded_texture_list = {0};
+
+hashmap_t loaded_textures_map = {0};
+hash_node_t **hash_node_ptr_array = NULL;
+hash_node_t *hash_node_array = NULL;
 
 int textureUnits_initialized = GL_FALSE;
 int LoadedTextures_initialized = GL_FALSE;
@@ -18,13 +31,21 @@ int texture_unit_freelist_alloc()
     if (textureUnits_initialized == GL_TRUE)
         return 0;
 
-    long int MaxTextureImageUnits;
-    glGetInteger64v(GL_MAX_TEXTURE_IMAGE_UNITS, &MaxTextureImageUnits); // fragment
+    glGetInteger64v(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_image_units); // fragment
 
-#ifdef ERROR_CHECKING
-    THROW_ERR((MaxTextureImageUnits <= 0), "INVALID MAX TextureUnits POINTS", return retval);
-#endif
-    CHECK(freelist_alloc(&texture_units, MaxTextureImageUnits, sizeof(unsigned long int)), return retval);
+    CHECK_ERR(max_texture_image_units <= 0
+                  ? EPERM
+                  : EXIT_SUCCESS,
+              strerror(errno), return errno);
+    CHECK_ERR(safe_alloc((void **)&texture_image_unit_array, max_texture_image_units * sizeof(texture_image_unit_array[0])), strerror(errno), return errno);
+    memset(texture_image_unit_array, 0, max_texture_image_units * sizeof(texture_image_unit_array[0]));
+
+    for (long int index = 0; index < max_texture_image_units; index++)
+    {
+        texture_image_unit_array[index] = index;
+    }
+    index_texture_image_unit = 0;
+
     textureUnits_initialized = GL_TRUE;
 
     return 0;
@@ -35,7 +56,9 @@ int texture_unit_freelist_free()
     if (textureUnits_initialized != GL_TRUE)
         return 0;
 
-    CHECK(freelist_free(&texture_units), return retval);
+    index_texture_image_unit = -1;
+    max_texture_image_units = 0;
+    CHECK_ERR(safe_free((void **)&texture_image_unit_array, max_texture_image_units * sizeof(long int)), strerror(errno), return errno);
 
     textureUnits_initialized = GL_FALSE;
     return 0;
@@ -43,15 +66,41 @@ int texture_unit_freelist_free()
 
 int loaded_textures_alloc(unsigned long num_textures)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR((num_textures == 0), "INVALID TEXTURE COUNT", return retval);
-#endif
-
-    stbi_set_flip_vertically_on_load(1);
+    CHECK_ERR(num_textures == 0 ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
     if (LoadedTextures_initialized == GL_TRUE)
         return 0;
-    CHECK(freelist_alloc(&loaded_texture_list, num_textures, sizeof(texture_t)), return retval);
-    CHECK(hashmap_alloc(&loaded_textures_map, NULL, num_textures, num_textures), return retval);
+    stbi_set_flip_vertically_on_load(1);
+
+    // CHECK(freelist_alloc(&loaded_texture_list, num_textures, sizeof(texture_t)), return errno);
+
+    CHECK_ERR(safe_alloc((void **)&loaded_texture_array, num_textures * sizeof(loaded_texture_array[0])), strerror(errno), return errno);
+    memset(loaded_texture_array, 0, num_textures * sizeof(loaded_texture_array[0]));
+
+    CHECK_ERR(freelist_init(&loaded_texture_list,
+                            num_textures * sizeof(loaded_texture_array[0]),
+                            loaded_texture_array,
+                            sizeof(loaded_texture_array[0]),
+                            8UL,
+                            NULL,
+                            NULL),
+              strerror(errno), return errno);
+
+    CHECK_ERR(safe_alloc((void **)&hash_node_ptr_array, num_textures * sizeof(hash_node_ptr_array[0])), strerror(errno), return errno);
+    memset(hash_node_ptr_array, 0, num_textures * sizeof(hash_node_ptr_array[0]));
+    CHECK_ERR(safe_alloc((void **)&hash_node_array, num_textures * sizeof(hash_node_array[0])), strerror(errno), return errno);
+    memset(hash_node_array, 0, num_textures * sizeof(hash_node_array[0]));
+    CHECK_ERR(hashmap_init(
+                  &loaded_textures_map,
+                  num_textures,
+                  hash_node_ptr_array,
+                  num_textures,
+                  hash_node_array,
+                  NULL,
+                  NULL,
+                  NULL,
+                  NULL),
+              strerror(errno), return errno);
+    max_num_textures = num_textures;
     LoadedTextures_initialized = GL_TRUE;
     return 0;
 }
@@ -60,20 +109,20 @@ int loaded_textures_free()
 {
     if (LoadedTextures_initialized != GL_TRUE)
         return 0;
-    CHECK(freelist_free(&loaded_texture_list), return retval);
-    CHECK(hashmap_free(&loaded_textures_map), return retval);
+    CHECK_ERR(safe_free((void **)&loaded_texture_array, max_num_textures * sizeof(loaded_texture_array[0])), strerror(errno), return errno);
+
+    CHECK_ERR(safe_free((void **)&hash_node_ptr_array, max_num_textures * sizeof(hash_node_ptr_array[0])), strerror(errno), return errno);
+    CHECK_ERR(safe_free((void **)&hash_node_array, max_num_textures * sizeof(hash_node_array[0])), strerror(errno), return errno);
+
     LoadedTextures_initialized = GL_FALSE;
     return 0;
 }
 
 int texture_alloc(texture_t *texture, const char *filePath)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR((texture == NULL), "NULL TEXTURE PTR", return retval);
-    THROW_ERR((filePath == NULL), "NULL FILE PTR", return retval);
-#endif
+    CHECK_ERR(texture == NULL || filePath == NULL ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
 
-    THROW_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), return retval);
+    CHECK_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), return errno);
 
     texture->width = -1;
     texture->height = -1;
@@ -82,10 +131,10 @@ int texture_alloc(texture_t *texture, const char *filePath)
     texture->unit = -1;
 
     unsigned char *data = stbi_load(filePath, &(texture->width), &(texture->height), &(texture->channels), 0);
-    THROW_ERR((data == NULL), "",
+    CHECK_ERR((data == NULL), "",
               {
-                  THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
-                  return retval;
+                  CHECK_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return errno);
+                  return errno;
               });
 
     glGenTextures(1, &(texture->ID));
@@ -114,58 +163,45 @@ int texture_alloc(texture_t *texture, const char *filePath)
 
     glBindTexture(GL_TEXTURE_2D, prevTexture2D);
 
-    THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
+    CHECK_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return errno);
     return 0;
 }
 
 int texture_free(texture_t *texture)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR((texture == NULL), "NULL TEXTURE PTR", return retval);
-#endif
+    CHECK_ERR(texture == NULL ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
 
-    THROW_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), return retval);
+    CHECK_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), return errno);
     glDeleteTextures(1, &(texture->ID));
     texture->width = -1;
     texture->height = -1;
     texture->channels = -1;
     texture->ID = GL_FALSE;
     texture->unit = -1;
-    THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
+    CHECK_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return errno);
     return 0;
 }
 
-int texture_activate(unsigned long int loaded_texture_index, int *unit)
+int texture_activate(texture_t *texture, int *unit)
 {
-    THROW_ERR(pthread_rwlock_rdlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-#ifdef ERROR_CHECKING
-    THROW_ERR((loaded_texture_index > loaded_texture_list.pool.max_count), "INVALID TEXTURE INDEX", {
-        THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-        return retval;
-    });
-#endif
-    texture_t *texture = NULL;
+    CHECK_ERR(texture == NULL || unit == NULL ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
 
-    CHECK(pool_get_ptr((void **)&texture, &(loaded_texture_list.pool), loaded_texture_index), {
-        THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-        return retval;
-    });
-    THROW_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), {
-        THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-        return retval;
-    });
-    THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), {
-        THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
-        return retval;
-    });
+    CHECK_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), return errno;);
 
     if (texture->unit == -1)
     {
-        unsigned long int new_unit = (unsigned int)-1l;
-        CHECK(freelist_aquire(&new_unit, &texture_units), {
-            THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
-            return retval;
-        });
+        long int new_unit = -1l;
+
+        CHECK_ERR(pthread_mutex_lock(&(lock_texture_unit_array)), strerror(errno), return errno;);
+        if (index_texture_image_unit < 0 || index_texture_image_unit >= max_texture_image_units)
+        {
+            CHECK_ERR(pthread_mutex_unlock(&(lock_texture_unit_array)), strerror(errno), return errno);
+            return -1;
+        }
+        new_unit = texture_image_unit_array[index_texture_image_unit++];
+
+        CHECK_ERR(pthread_mutex_unlock(&(lock_texture_unit_array)), strerror(errno), return errno);
+
         texture->unit = (int)new_unit;
 
         GLint prevTextureUnit;
@@ -178,36 +214,16 @@ int texture_activate(unsigned long int loaded_texture_index, int *unit)
     }
     *unit = texture->unit;
 
-    THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
+    CHECK_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return errno);
 
     return 0;
 }
 
-int texture_deactivate(unsigned long int loaded_texture_index)
+int texture_deactivate(texture_t *texture)
 {
+    CHECK_ERR(texture == NULL ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
 
-    THROW_ERR(pthread_rwlock_rdlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-#ifdef ERROR_CHECKING
-    THROW_ERR((loaded_texture_index > loaded_texture_list.pool.max_count), "INVALID TEXTURE INDEX", {
-        THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-        return retval;
-    });
-#endif
-
-    texture_t *texture;
-
-    CHECK(pool_get_ptr((void **)&texture, &(loaded_texture_list.pool), loaded_texture_index), {
-        THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-        return retval;
-    });
-    THROW_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), {
-        THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-        return retval;
-    });
-    THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), {
-        THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
-        return retval;
-    });
+    CHECK_ERR(pthread_mutex_lock(&(texture->mutex_lock)), strerror(errno), return errno;);
 
     if (texture->unit != -1)
     {
@@ -219,79 +235,54 @@ int texture_deactivate(unsigned long int loaded_texture_index)
 
         glActiveTexture(prevTextureUnit);
 
-        unsigned long int unit = (unsigned long int)texture->unit;
-        CHECK(freelist_release(&unit, &texture_units), {
-            THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
-            return retval;
-        });
+        CHECK_ERR(pthread_mutex_lock(&(lock_texture_unit_array)), strerror(errno), return errno;);
+        if (index_texture_image_unit <= 0 || index_texture_image_unit > max_texture_image_units)
+        {
+            CHECK_ERR(pthread_mutex_unlock(&(lock_texture_unit_array)), strerror(errno), return errno);
+            return -1;
+        }
+        texture_image_unit_array[--index_texture_image_unit] = texture->unit;
+
+        CHECK_ERR(pthread_mutex_unlock(&(lock_texture_unit_array)), strerror(errno), return errno);
+
         texture->unit = (int)-1;
     }
 
-    THROW_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return retval);
+    CHECK_ERR(pthread_mutex_unlock(&(texture->mutex_lock)), strerror(errno), return errno);
     return 0;
 }
 
-int get_load_texture(unsigned long int *loaded_texture_index, char *filePath, unsigned long path_length)
+int get_load_texture(texture_t **ptr_texture, char *filePath, unsigned long path_length)
 {
+    CHECK_ERR(ptr_texture == NULL || filePath == NULL ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
 
     texture_t *texture = NULL;
 
-    CHECK(hashmap_find((void **)loaded_texture_index, &loaded_textures_map, (unsigned char *)filePath, path_length), return retval);
+    CHECK_ERR(HASHMAP_FIND(loaded_textures_map, path_length, filePath, texture), strerror(errno), return errno);
 
-    THROW_ERR(pthread_rwlock_rdlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-
-    if (*loaded_texture_index > loaded_texture_list.pool.max_count)
+    if (texture == NULL)
     {
-        CHECK(freelist_aquire(loaded_texture_index, &loaded_texture_list), {
-            THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-            return retval;
-        });
+        FREELIST_GET(loaded_texture_list, texture);
 
-        CHECK(pool_get_ptr((void **)&texture, &(loaded_texture_list.pool), *loaded_texture_index), {
-            THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-            return retval;
-        });
+        memset(texture, 0, sizeof(*texture));
 
-        memset(texture, 0, sizeof(texture_t));
+        CHECK_ERR(texture_alloc(texture, filePath), strerror(errno), return errno);
 
-        CHECK(texture_alloc(texture, filePath), {
-            THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-            return retval;
-        });
-
-        CHECK(hashmap_add((void *)*loaded_texture_index, &loaded_textures_map, (unsigned char *)filePath, path_length), {
-            THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-            return retval;
-        });
+        CHECK_ERR(HASHMAP_ADD(loaded_textures_map, path_length, filePath, texture), strerror(errno), return errno);
     }
-    THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-
+    *ptr_texture = texture;
     return 0;
 }
 
 int unload_texture(char *filePath, unsigned long path_length)
 {
-    unsigned long int loaded_texture_index = (unsigned long int)-1l;
-    texture_t *texture;
+    texture_t *texture = NULL;
+    CHECK_ERR(HASHMAP_ADD(loaded_textures_map, path_length, filePath, texture), strerror(errno), return errno);
 
-    CHECK(hashmap_remove((void **)&loaded_texture_index, &loaded_textures_map, (unsigned char *)filePath, path_length), return retval);
-
-    THROW_ERR(pthread_rwlock_rdlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-    if (loaded_texture_index < loaded_texture_list.pool.max_count)
+    if (texture != NULL)
     {
-        CHECK(pool_get_ptr((void **)&texture, &(loaded_texture_list.pool), loaded_texture_index), {
-            THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-            return retval;
-        });
-        CHECK(texture_free(texture), {
-            THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-            return retval;
-        });
-        CHECK(freelist_release(&loaded_texture_index, &loaded_texture_list), {
-            THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
-            return retval;
-        });
+        CHECK_ERR(texture_free(texture), strerror(errno), return errno);
+        FREELIST_REL(loaded_texture_list, texture);
     }
-    THROW_ERR(pthread_rwlock_unlock(&(loaded_texture_list.pool.rwlock)), strerror(errno), return retval);
     return 0;
 }

@@ -3,6 +3,9 @@
 #include <string.h>
 
 #include <GL/glew.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #include "nonstd.h"
 #include "nonstd_opengl_shader.h"
@@ -11,12 +14,12 @@ int readFile(const char *filename, char **const buffer, long int *len)
 {
     FILE *fp = fopen(filename, "rb");
     if (fp != NULL)
-        THROW_ERR((fp == NULL), "COULD NOT OPEN FILE", return retval);
+        CHECK_ERR((fp == NULL), "COULD NOT OPEN FILE", return EINVAL);
 
     fseek(fp, 0, SEEK_END);
     long int fileSize = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    CHECK(safe_alloc((void **)buffer, fileSize + 1), return retval);
+    CHECK_ERR(safe_alloc((void **)buffer, fileSize + 1), strerror(errno), return errno);
     memset((void *)*buffer, '\0', fileSize + 1);
     rewind(fp);
     fread((void *)*buffer, fileSize, 1, fp);
@@ -38,7 +41,7 @@ int CompileShader(unsigned int type, const char *const *shaderCode, unsigned int
     if (!success)
     {
         glGetShaderInfoLog(id, 1024, NULL, infoLog);
-        THROW_ERR((!success), infoLog, return retval);
+        CHECK_ERR((!success), infoLog, return -1);
     }
     *shaderProgram = id;
     return 0;
@@ -74,16 +77,16 @@ int shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPa
     long int vertex_size = 0l;
     long int fragmt_size = 0l;
 
-    CHECK(readFile(vertexPath, (char **const)&vertexCode, &vertex_size), return retval);
-    CHECK(readFile(fragmentPath, (char **const)&fragmentCode, &fragmt_size), return retval);
+    CHECK_ERR(readFile(vertexPath, (char **const)&vertexCode, &vertex_size), strerror(errno), return errno);
+    CHECK_ERR(readFile(fragmentPath, (char **const)&fragmentCode, &fragmt_size), strerror(errno), return errno);
 
     // 2. compile shaders
     unsigned int vertex, fragment;
-    CHECK(CompileShader(GL_VERTEX_SHADER, (const char *const *)&vertexCode, &vertex), return retval);
-    CHECK(CompileShader(GL_FRAGMENT_SHADER, (const char *const *)&fragmentCode, &fragment), return retval);
+    CHECK_ERR(CompileShader(GL_VERTEX_SHADER, (const char *const *)&vertexCode, &vertex), strerror(errno), return errno);
+    CHECK_ERR(CompileShader(GL_FRAGMENT_SHADER, (const char *const *)&fragmentCode, &fragment), strerror(errno), return errno);
 
-    CHECK(safe_free((void **)&vertexCode, vertex_size), return retval);
-    CHECK(safe_free((void **)&fragmentCode, fragmt_size), return retval);
+    CHECK_ERR(safe_free((void **)&vertexCode, vertex_size), strerror(errno), return errno);
+    CHECK_ERR(safe_free((void **)&fragmentCode, fragmt_size), strerror(errno), return errno);
 
     // 3. link shaders
     if (vertex != GL_FALSE && fragment != GL_FALSE)
@@ -108,24 +111,21 @@ int shader_free(shader_t *shader)
 
 int shader_use(const shader_t *shader)
 {
-    THROW_ERR((shader == NULL), "NULL SHADER PTR", return retval);
+    CHECK_ERR((shader == NULL), strerror(errno), return errno);
     glUseProgram(shader->ID);
     return 0;
 }
 
 int shader_bindBuffer(const shader_t *shader, const char *name, const unsigned int index)
 {
-    THROW_ERR((shader == NULL), "NULL SHADER PTR", return retval);
+    CHECK_ERR((shader == NULL), strerror(errno), return errno);
     glUniformBlockBinding(shader->ID, glGetUniformBlockIndex(shader->ID, name), index);
     return 0;
 }
 
 int shader_set(const shader_t *shader, const char *name, const shader_set_type_t type, const int count, void *value)
 {
-    THROW_ERR((shader == NULL), "NULL SHADER PTR", return retval);
-    THROW_ERR((name == NULL), "NULL NAME PTR", return retval);
-    THROW_ERR((count == 0), "INVALID COUNT", return retval);
-    THROW_ERR((value == NULL), "NULL VALUE PTR", return retval);
+    CHECK_ERR((shader == NULL || name == NULL || count == 0 || value == NULL ? EINVAL : EXIT_SUCCESS), strerror(errno), return errno);
 
     GLint loc = glGetUniformLocation(shader->ID, name);
     switch (type)
@@ -177,7 +177,7 @@ int shader_set(const shader_t *shader, const char *name, const shader_set_type_t
         break;
 
     default:
-        THROW_ERR((name == NULL), "UNKNOWN TYPE", return retval);
+        CHECK_ERR((name == NULL), "UNKNOWN TYPE", return -1);
         break;
     }
     return 0;

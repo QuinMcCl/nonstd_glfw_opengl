@@ -1,4 +1,7 @@
 #include <time.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 #include "nonstd.h"
 #include "nonstd_glfw_window.h"
 
@@ -8,9 +11,7 @@ int has_glew_initialized = GL_FALSE;
 GLFWerrorfun old_errorcallback;
 void errorcallback(int error_code, const char *description)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR(error_code, description, ;);
-#endif
+    CHECK_ERR(error_code, description, );
     if (old_errorcallback != NULL)
         old_errorcallback(error_code, description);
     exit(error_code);
@@ -19,9 +20,7 @@ void window_framebuffersizefun(GLFWwindow *window, int width, int height);
 
 int window_init(window_t *window, unsigned int width, unsigned int height, const char *title, float clear_red, float clear_green, float clear_blue, float clear_alpha)
 {
-#ifdef ERROR_CHECKING
-    THROW_ERR((window == NULL), "NULL WINDOW PTR", return retval);
-#endif
+    CHECK_ERR(window == NULL || title == NULL ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
     window->width = width;
     window->height = height;
     window->aspect = (float)window->width / (float)window->height;
@@ -32,10 +31,7 @@ int window_init(window_t *window, unsigned int width, unsigned int height, const
     has_glfw_initialized = glfwInit();
     if (GLFW_TRUE != has_glfw_initialized)
     {
-#ifdef ERROR_CHECKING
-        THROW_ERR(-1, "GLFW FAILED TO INITIALIZE", return retval;);
-#endif
-        return -1;
+        CHECK_ERR(-1, "GLFW FAILED TO INITIALIZE", return errno);
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -51,10 +47,7 @@ int window_init(window_t *window, unsigned int width, unsigned int height, const
     window->window = glfwCreateWindow(window->width, window->height, title, NULL, NULL);
     if (window->window == NULL)
     {
-#ifdef ERROR_CHECKING
-        THROW_ERR(-1, "GLFW FAILED TO CREATE WINDOW", return retval;);
-#endif
-        return -1;
+        CHECK_ERR(-1, "GLFW FAILED TO CREATE WINDOW", return errno);
     }
 
 #ifdef CONTEXT_SWITCHING
@@ -72,10 +65,7 @@ int window_init(window_t *window, unsigned int width, unsigned int height, const
     GLenum glew_err = glewInit();
     if (GLEW_OK != glew_err)
     {
-#ifdef ERROR_CHECKING
-        THROW_ERR(glew_err, glewGetErrorString(glew_err), return retval;);
-#endif
-        return -1;
+        CHECK_ERR(glew_err, glewGetErrorString(glew_err), return errno);
     }
 
     glClearColor(clear_red, clear_green, clear_blue, clear_alpha);
@@ -125,4 +115,3 @@ void window_swap(window_t *window)
     glfwMakeContextCurrent(oldContext);
 #endif
 }
-

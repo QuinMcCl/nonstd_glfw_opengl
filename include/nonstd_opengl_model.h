@@ -9,7 +9,6 @@ extern "C"
 {
 #endif
 
-
     typedef struct material_texture_s
     {
         char name[1024];
@@ -20,14 +19,13 @@ extern "C"
         enum aiTextureOp op;
         enum aiTextureMapMode mapmode;
         unsigned int flags;
-        unsigned long int mTextureIndex;
+        texture_t *mTexturePtr;
     } material_texture_t;
 
     typedef struct material_s
     {
         unsigned int mTextureCount[AI_TEXTURE_TYPE_MAX + 1];
         material_texture_t *mTextures[AI_TEXTURE_TYPE_MAX + 1];
-        // unsigned long int *mTextureIndex[AI_TEXTURE_TYPE_MAX + 1];
         unsigned int mNumMeshes;
         unsigned int *mMeshes;
     } material_t;
