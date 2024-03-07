@@ -56,10 +56,10 @@ int texture_unit_freelist_free()
     if (textureUnits_initialized != GL_TRUE)
         return 0;
 
+    CHECK_ERR(safe_free((void **)&texture_image_unit_array, max_texture_image_units * sizeof(texture_image_unit_array[0])), strerror(errno), return errno);
+
     index_texture_image_unit = -1;
     max_texture_image_units = 0;
-    CHECK_ERR(safe_free((void **)&texture_image_unit_array, max_texture_image_units * sizeof(long int)), strerror(errno), return errno);
-
     textureUnits_initialized = GL_FALSE;
     return 0;
 }
