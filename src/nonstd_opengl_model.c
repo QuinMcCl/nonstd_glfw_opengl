@@ -23,6 +23,7 @@ TODO glMultiDrawElementsIndirect
 #include "nonstd_opengl_model.h"
 
 #define MODEL_LOADING_FLAGS aiProcessPreset_TargetRealtime_MaxQuality
+#define ON_ERROR return errno;
 
 static inline __attribute((always_inline)) void aiMat4ToCglmMat4(struct aiMatrix4x4 mat, mat4 dest)
 {
@@ -45,7 +46,7 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
 
         if (TextureCount > 0)
         {
-            CHECK_ERR(safe_alloc((void **)&(material->mTextures[type]), TextureCount * sizeof(material_texture_t)), strerror(errno), return errno);
+            CHECK_ERR(safe_alloc((void **)&(material->mTextures[type]), TextureCount * sizeof(material_texture_t)));
             memset((void *)material->mTextures[type], 0, TextureCount * sizeof(material_texture_t));
         }
 
@@ -72,7 +73,7 @@ int material_alloc(material_t *material, const char *rootpath, const struct aiMa
                 path_length = MAX_PATH_LENGTH;
 
             texture_data->mTexturePtr = NULL;
-            CHECK_ERR(get_load_texture(&(texture_data->mTexturePtr), file_path, path_length), strerror(errno), return errno);
+            CHECK_ERR(get_load_texture(&(texture_data->mTexturePtr), file_path, path_length));
             snprintf((char *)texture_data->name, 1023, "Material.%s[%d]", materialNames[type], index);
         }
     }
@@ -85,7 +86,7 @@ int material_free(material_t *material)
     {
         if (material->mTextureCount[type] > 0)
         {
-            CHECK_ERR(safe_free((void **)&(material->mTextures[type]), material->mTextureCount[type] * sizeof(material_texture_t)), strerror(errno), return errno);
+            CHECK_ERR(safe_free((void **)&(material->mTextures[type])));
         }
     }
     return 0;
@@ -209,7 +210,7 @@ int model_node_alloc(model_node_t *node, model_node_t *parent_node, model_t *mod
     node->mNumMeshes = aiNode->mNumMeshes;
     if (node->mNumMeshes > 0)
     {
-        CHECK_ERR(safe_alloc((void **)&(node->mMeshData), node->mNumMeshes * sizeof(node_mesh_data_t)), strerror(errno), return errno);
+        CHECK_ERR(safe_alloc((void **)&(node->mMeshData), node->mNumMeshes * sizeof(node_mesh_data_t)));
         memset(node->mMeshData, 0, node->mNumMeshes * sizeof(node_mesh_data_t));
     }
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
@@ -221,7 +222,7 @@ int model_node_alloc(model_node_t *node, model_node_t *parent_node, model_t *mod
     node->mNumChildren = aiNode->mNumChildren;
     if (node->mNumChildren > 0)
     {
-        CHECK_ERR(safe_alloc((void **)&(node->mChildren), node->mNumChildren * sizeof(model_node_t)), strerror(errno), return errno);
+        CHECK_ERR(safe_alloc((void **)&(node->mChildren), node->mNumChildren * sizeof(model_node_t)));
         memset(node->mChildren, 0, node->mNumChildren * sizeof(model_node_t));
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
@@ -241,11 +242,11 @@ int model_node_free(model_node_t *node)
     }
     if (node->mNumMeshes > 0)
     {
-        CHECK_ERR(safe_free((void **)&(node->mMeshData), node->mNumMeshes * sizeof(node_mesh_data_t)), strerror(errno), return errno);
+        CHECK_ERR(safe_free((void **)&(node->mMeshData)));
     }
     if (node->mNumChildren > 0)
     {
-        CHECK_ERR(safe_free((void **)&(node->mChildren), node->mNumChildren * sizeof(model_node_t)), strerror(errno), return errno);
+        CHECK_ERR(safe_free((void **)&(node->mChildren)));
     }
     return 0;
 }
@@ -281,23 +282,37 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
     const struct aiScene *scene = aiImportFile(file_path, MODEL_LOADING_FLAGS);
 
     // If the import failed, report it
-    CHECK_ERR((NULL == scene), aiGetErrorString(), return EINVAL);
+    if (scene == NULL)
+    {
+        fprintf(stderr, "%s at %s:%d %s\n", aiGetErrorString(), __FILE__, __LINE__, "aiImportFile()");
+        fflush(stderr);
+        return EINVAL;
+    }
 
     // CHECK_ERR((scene->mFlags && AI_SCENE_FLAGS_INCOMPLETE), "INCOMPLETE SCENE", return EINVAL);
-    CHECK_ERR(!(scene->mFlags && AI_SCENE_FLAGS_VALIDATED), "INVALID SCENE", return EINVAL);
+    // CHECK_ERR(!(scene->mFlags && AI_SCENE_FLAGS_VALIDATED), "INVALID SCENE", return EINVAL);
     // CHECK_ERR((scene->mFlags && AI_SCENE_FLAGS_VALIDATION_WARNING), "INVALID SCENE", return EINVAL);
+    if (scene->mFlags & AI_SCENE_FLAGS_VALIDATED)
+    {
+        fprintf(stderr, "INVALID SCENE at %s:%d %s\n", __FILE__, __LINE__, "aiImportFile()");
+        fflush(stderr);
+        return EINVAL;
+    }
 
-    // Now we can access the file's contents
-    // DoTheSceneProcessing(scene);
-    CHECK_ERR((scene->mNumMaterials == 0), "NO MATERIALS IN SCENE", return EINVAL);
+    if (scene->mNumMaterials <= 0)
+    {
+        fprintf(stderr, "NO MATERIALS IN SCENE at %s:%d %s\n", __FILE__, __LINE__, "aiImportFile()");
+        fflush(stderr);
+        return EINVAL;
+    }
 
     model->mNumMaterials = scene->mNumMaterials;
-    CHECK_ERR(safe_alloc((void **)&(model->mMaterialList), model->mNumMaterials * sizeof(material_t)), strerror(errno), return errno);
+    CHECK_ERR(safe_alloc((void **)&(model->mMaterialList), model->mNumMaterials * sizeof(material_t)));
     memset((void *)model->mMaterialList, 0, model->mNumMaterials * sizeof(material_t));
 
     for (unsigned int i = 0; i < model->mNumMaterials; i++)
     {
-        CHECK_ERR(material_alloc(&(model->mMaterialList[i]), rootpath, scene->mMaterials[i]), strerror(errno), return errno);
+        CHECK_ERR(material_alloc(&(model->mMaterialList[i]), rootpath, scene->mMaterials[i]));
 
         model->mMaterialList[i].mNumMeshes = 0;
         for (unsigned int j = 0; j < scene->mNumMeshes; j++)
@@ -307,7 +322,7 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
                 model->mMaterialList[i].mNumMeshes++;
             }
         }
-        CHECK_ERR(safe_alloc((void **)&(model->mMaterialList[i].mMeshes), model->mMaterialList[i].mNumMeshes * sizeof(unsigned int)), strerror(errno), return errno);
+        CHECK_ERR(safe_alloc((void **)&(model->mMaterialList[i].mMeshes), model->mMaterialList[i].mNumMeshes * sizeof(unsigned int)));
         unsigned int index = 0;
         for (unsigned int j = 0; j < scene->mNumMeshes; j++)
         {
@@ -319,19 +334,19 @@ int model_alloc(model_t *model, shader_t *shader, const char *rootpath, const ch
     }
 
     model->mNumMeshes = scene->mNumMeshes;
-    CHECK_ERR(safe_alloc((void **)&(model->mMeshList), scene->mNumMeshes * sizeof(mesh_t)), strerror(errno), return errno);
+    CHECK_ERR(safe_alloc((void **)&(model->mMeshList), scene->mNumMeshes * sizeof(mesh_t)));
     memset((void *)model->mMeshList, 0, model->mNumMeshes * sizeof(mesh_t));
 
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
-        CHECK_ERR(mesh_alloc(&(model->mMeshList[i]), scene->mMeshes[i]), strerror(errno), return errno);
+        CHECK_ERR(mesh_alloc(&(model->mMeshList[i]), scene->mMeshes[i]));
     }
 
     model_node_alloc(&(model->mRootNode), NULL, model, scene->mRootNode);
 
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
-        CHECK_ERR(safe_alloc((void **)&(model->mMeshList[i].mTransformation), model->mMeshList[i].mNumInstances * sizeof(mat4)), strerror(errno), return errno);
+        CHECK_ERR(safe_alloc((void **)&(model->mMeshList[i].mTransformation), model->mMeshList[i].mNumInstances * sizeof(mat4)));
         memset((void *)model->mMeshList[i].mTransformation, 0, model->mMeshList[i].mNumInstances * sizeof(mat4));
     }
 
@@ -345,17 +360,17 @@ int model_free(model_t *model)
 {
     for (unsigned int i = 0; i < model->mNumMaterials; i++)
     {
-        CHECK_ERR(material_free(&(model->mMaterialList[i])), strerror(errno), return errno);
+        CHECK_ERR(material_free(&(model->mMaterialList[i])));
     }
-    CHECK_ERR(safe_free((void **)&(model->mMaterialList), model->mNumMaterials * sizeof(material_t)), strerror(errno), return errno);
+    CHECK_ERR(safe_free((void **)&(model->mMaterialList)));
 
     for (unsigned int i = 0; i < model->mNumMeshes; i++)
     {
-        CHECK_ERR(mesh_free(&(model->mMeshList[i])), strerror(errno), return errno);
+        CHECK_ERR(mesh_free(&(model->mMeshList[i])));
     }
-    CHECK_ERR(safe_free((void **)&(model->mMeshList), model->mNumMeshes * sizeof(mesh_t)), strerror(errno), return errno);
+    CHECK_ERR(safe_free((void **)&(model->mMeshList)));
 
-    CHECK_ERR(model_node_free(&(model->mRootNode)), strerror(errno), return errno);
+    CHECK_ERR(model_node_free(&(model->mRootNode)));
 
     model->mModelName = NULL;
     model->mPathLength = 0;
@@ -365,7 +380,7 @@ int model_free(model_t *model)
 int mesh_draw(mesh_t *mesh, const shader_t *shader)
 {
     // draw mesh
-    CHECK_ERR(shader_set(shader, "model", M4, mesh->mNumInstances, mesh->mTransformation), strerror(errno), return errno);
+    CHECK_ERR(shader_set(shader, "model", M4, mesh->mNumInstances, mesh->mTransformation));
     glBindVertexArray(mesh->mVAO);
     glDrawElementsInstanced(GL_TRIANGLES, mesh->mNumElements, GL_UNSIGNED_INT, 0, mesh->mNumInstances);
     glBindVertexArray(0);
@@ -382,14 +397,14 @@ int material_draw(material_t *material, model_t *model)
             material_texture_t *texture_data = &(material->mTextures[type][index]);
 
             int unit = -1;
-            CHECK_ERR(texture_activate(texture_data->mTexturePtr, &unit), strerror(errno), return errno);
-            CHECK_ERR(shader_set(model->mShader, texture_data->name, I1, 1, &unit), strerror(errno), return errno);
+            CHECK_ERR(texture_activate(texture_data->mTexturePtr, &unit));
+            CHECK_ERR(shader_set(model->mShader, texture_data->name, I1, 1, &unit));
         }
     }
 
     for (unsigned int j = 0; j < material->mNumMeshes; j++)
     {
-        CHECK_ERR(mesh_draw(&(model->mMeshList[material->mMeshes[j]]), model->mShader), strerror(errno), return errno);
+        CHECK_ERR(mesh_draw(&(model->mMeshList[material->mMeshes[j]]), model->mShader));
     }
     return 0;
 }
@@ -399,11 +414,13 @@ int model_draw(model_t *model, mat4 transform)
 
     model_node_update_mesh_transforms(&(model->mRootNode), model, transform);
 
-    CHECK_ERR(shader_use(model->mShader), strerror(errno), return errno);
+    CHECK_ERR(shader_use(model->mShader));
     for (unsigned int i = 0; i < model->mNumMaterials; i++)
     {
-        CHECK_ERR(material_draw(&(model->mMaterialList[i]), model), strerror(errno), return errno);
+        CHECK_ERR(material_draw(&(model->mMaterialList[i]), model));
     }
 
     return 0;
 }
+
+#undef ON_ERROR

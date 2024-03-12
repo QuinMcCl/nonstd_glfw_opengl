@@ -11,7 +11,8 @@ int has_glew_initialized = GL_FALSE;
 GLFWerrorfun old_errorcallback;
 void errorcallback(int error_code, const char *description)
 {
-    CHECK_ERR(error_code, description, );
+    fprintf(stderr, "GLFW ERROR %d:%s", error_code, description);
+    fflush(stderr);
     if (old_errorcallback != NULL)
         old_errorcallback(error_code, description);
     exit(error_code);
@@ -20,7 +21,8 @@ void window_framebuffersizefun(GLFWwindow *window, int width, int height);
 
 int window_init(window_t *window, unsigned int width, unsigned int height, const char *title, float clear_red, float clear_green, float clear_blue, float clear_alpha)
 {
-    CHECK_ERR(window == NULL || title == NULL ? EINVAL : EXIT_SUCCESS, strerror(errno), return errno);
+    assert(window != NULL && "NULL WINDOW PTR");
+    assert(title != NULL && "NULL TITLE PTR");
     window->width = width;
     window->height = height;
     window->aspect = (float)window->width / (float)window->height;
@@ -31,7 +33,9 @@ int window_init(window_t *window, unsigned int width, unsigned int height, const
     has_glfw_initialized = glfwInit();
     if (GLFW_TRUE != has_glfw_initialized)
     {
-        CHECK_ERR(-1, "GLFW FAILED TO INITIALIZE", return errno);
+        fprintf(stderr, "GLFW FAILED TO INITIALIZE at %s:%d %s\n", __FILE__, __LINE__, "glfwInit();");
+        fflush(stderr);
+        return -1;
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -47,7 +51,9 @@ int window_init(window_t *window, unsigned int width, unsigned int height, const
     window->window = glfwCreateWindow(window->width, window->height, title, NULL, NULL);
     if (window->window == NULL)
     {
-        CHECK_ERR(-1, "GLFW FAILED TO CREATE WINDOW", return errno);
+        fprintf(stderr, "GLFW FAILED TO CREATE WINDOW at %s:%d %s\n", __FILE__, __LINE__, "glfwCreateWindow();");
+        fflush(stderr);
+        return -1;
     }
 
 #ifdef CONTEXT_SWITCHING
@@ -65,7 +71,9 @@ int window_init(window_t *window, unsigned int width, unsigned int height, const
     GLenum glew_err = glewInit();
     if (GLEW_OK != glew_err)
     {
-        CHECK_ERR(glew_err, glewGetErrorString(glew_err), return errno);
+        fprintf(stderr, "GLEW FAILED TO INITIALIZE at %s:%d %s\n", __FILE__, __LINE__, glewGetErrorString(glew_err));
+        fflush(stderr);
+        return -1;
     }
 
     glClearColor(clear_red, clear_green, clear_blue, clear_alpha);

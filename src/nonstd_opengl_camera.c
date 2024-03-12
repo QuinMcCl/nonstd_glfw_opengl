@@ -7,6 +7,7 @@
 #include "nonstd_opengl_buffer.h"
 #include "nonstd_opengl_camera.h"
 
+#define ON_ERROR return errno;
 int camera_alloc(
     camera_t *camera,
     vec3 position,
@@ -32,23 +33,23 @@ int camera_alloc(
     glm_vec3_copy(position, camera->mPosition);
     glm_vec3_copy(up, camera->mWorldUp);
 
-    CHECK_ERR(nonstd_opengl_ubo_init(&(camera->mViewProjection), "uboViewProjection", 2 * sizeof(mat4), GL_STREAM_DRAW), strerror(errno), return errno);
-    CHECK_ERR(nonstd_opengl_ubo_init(&(camera->mViewPosition), "uboViewPosition", sizeof(vec3), GL_STREAM_DRAW), strerror(errno), return errno);
+    CHECK_ERR(nonstd_opengl_ubo_init(&(camera->mViewProjection), "uboViewProjection", 2 * sizeof(mat4), GL_STREAM_DRAW));
+    CHECK_ERR(nonstd_opengl_ubo_init(&(camera->mViewPosition), "uboViewPosition", sizeof(vec3), GL_STREAM_DRAW));
 
     return 0;
 }
 
 int camera_free(camera_t *camera)
 {
-    CHECK_ERR(nonstd_opengl_ubo_cleanup(&(camera->mViewProjection)), strerror(errno), return errno);
-    CHECK_ERR(nonstd_opengl_ubo_cleanup(&(camera->mViewPosition)), strerror(errno), return errno);
+    CHECK_ERR(nonstd_opengl_ubo_cleanup(&(camera->mViewProjection)));
+    CHECK_ERR(nonstd_opengl_ubo_cleanup(&(camera->mViewPosition)));
     return 0;
 }
 
 int camera_update_view_projection(camera_t *camera)
 {
     vec3 center;
-    CHECK_ERR(nonstd_opengl_ubo_fill(&(camera->mViewPosition), camera->mPosition, sizeof(vec3), 0), strerror(errno), return errno);
+    CHECK_ERR(nonstd_opengl_ubo_fill(&(camera->mViewPosition), camera->mPosition, sizeof(vec3), 0));
 
     camera->front[0] = cos(glm_rad(camera->mYaw)) * cos(glm_rad(camera->mPitch));
     camera->front[1] = sin(glm_rad(camera->mPitch));
@@ -61,7 +62,7 @@ int camera_update_view_projection(camera_t *camera)
     glm_vec3_rotate(camera->up, glm_rad(camera->mRoll), camera->front);
     glm_lookat(camera->mPosition, center, camera->up, camera->mView);
 
-    CHECK_ERR(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->mView, sizeof(mat4), 0 * sizeof(mat4)), strerror(errno), return errno);
+    CHECK_ERR(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->mView, sizeof(mat4), 0 * sizeof(mat4)));
 
     if (camera->projection_type == PERSPECTIVE)
     {
@@ -72,7 +73,9 @@ int camera_update_view_projection(camera_t *camera)
         glm_ortho(-camera->mFOV, camera->mFOV, -camera->mFOV / camera->mAspect, camera->mFOV / camera->mAspect, camera->mNearZ, camera->mFarZ, camera->mProjection);
     }
 
-    CHECK_ERR(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->mProjection, sizeof(mat4), 1 * sizeof(mat4)), strerror(errno), return errno);
+    CHECK_ERR(nonstd_opengl_ubo_fill(&(camera->mViewProjection), camera->mProjection, sizeof(mat4), 1 * sizeof(mat4)));
 
     return 0;
 }
+
+#undef ON_ERROR
