@@ -32,7 +32,7 @@ int readFile(const char *filename, char **const buffer, long int *len)
     return 0;
 }
 
-int CompileShader(unsigned int type, const char *const *shaderCode, unsigned int *shaderProgram)
+int CompileShader(unsigned int type, const char *const *shaderCode)
 {
     unsigned int id = GL_FALSE;
     GLint success = GL_FALSE;
@@ -46,10 +46,10 @@ int CompileShader(unsigned int type, const char *const *shaderCode, unsigned int
     {
         glGetShaderInfoLog(id, 1024, NULL, infoLog);
         fprintf(stderr, "%s at %s:%d %s\n", infoLog, __FILE__, __LINE__, "glCompileShader()");
+        glDeleteShader(id);
         return GL_FALSE;
     }
-    *shaderProgram = id;
-    return 0;
+    return id;
 }
 
 unsigned int linkShader(unsigned int vertex, unsigned int fragment)
@@ -87,8 +87,8 @@ int shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPa
 
     // 2. compile shaders
     unsigned int vertex, fragment;
-    CHECK_ERR(CompileShader(GL_VERTEX_SHADER, (const char *const *)&vertexCode, &vertex));
-    CHECK_ERR(CompileShader(GL_FRAGMENT_SHADER, (const char *const *)&fragmentCode, &fragment));
+    vertex = CompileShader(GL_VERTEX_SHADER, (const char *const *)&vertexCode);
+    fragment = CompileShader(GL_FRAGMENT_SHADER, (const char *const *)&fragmentCode);
 
     CHECK_ERR(safe_free((void **)&vertexCode));
     CHECK_ERR(safe_free((void **)&fragmentCode));
@@ -96,6 +96,14 @@ int shader_init(shader_t *shader, const char *vertexPath, const char *fragmentPa
     // 3. link shaders
     if (vertex != GL_FALSE && fragment != GL_FALSE)
         shader->ID = linkShader(vertex, fragment);
+    else
+    {
+        if (vertex != GL_FALSE)
+            glDeleteShader(vertex);
+        if (fragment != GL_FALSE)
+            glDeleteShader(fragment);
+        return -1;
+    }
 
     // delete the shaders as they're linked into our program now and no longer necessary
     glDeleteShader(vertex);
@@ -125,7 +133,8 @@ int shader_use(const shader_t *shader)
 int shader_bindBuffer(const shader_t *shader, const char *name, const unsigned int index)
 {
     assert(shader != NULL);
-    glUniformBlockBinding(shader->ID, glGetUniformBlockIndex(shader->ID, name), index);
+    int BlockIndex = glGetUniformBlockIndex(shader->ID, name);
+    glUniformBlockBinding(shader->ID, BlockIndex, index);
     return 0;
 }
 
